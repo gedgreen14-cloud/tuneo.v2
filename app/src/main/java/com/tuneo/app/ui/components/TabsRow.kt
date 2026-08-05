@@ -3,6 +3,7 @@ package com.tuneo.app.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,8 +21,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 import com.tuneo.app.ui.theme.TuneoAccentBlue
-import com.tuneo.app.ui.theme.TuneoSurface
-import com.tuneo.app.ui.theme.TuneoTextSecondary
+import com.tuneo.app.ui.theme.TuneoSurfaceDark
+import com.tuneo.app.ui.theme.TuneoSurfaceLight
+import com.tuneo.app.ui.theme.TuneoTextPrimaryDark
+import com.tuneo.app.ui.theme.TuneoTextPrimaryLight
+import com.tuneo.app.ui.theme.TuneoTextSecondaryDark
+import com.tuneo.app.ui.theme.TuneoTextSecondaryLight
 
 enum class TuneoTab(val label: String) {
     VIDEOS("Vidéos"),
@@ -38,6 +43,11 @@ fun TabsRow(
     onSelect: (TuneoTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isDark = isSystemInDarkTheme()
+    val surfaceColor = if (isDark) TuneoSurfaceDark else TuneoSurfaceLight
+    val selectedTextColor = if (isDark) Color.White else Color.White // reste blanc sur le fond bleu accent, dans les deux modes
+    val unselectedTextColor = if (isDark) TuneoTextSecondaryDark else TuneoTextSecondaryLight
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -52,7 +62,7 @@ fun TabsRow(
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(if (isSelected) TuneoAccentBlue else TuneoSurface)
+                    .background(if (isSelected) TuneoAccentBlue else surfaceColor)
                     .clickable { onSelect(tab) }
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -61,14 +71,14 @@ fun TabsRow(
                     Icon(
                         imageVector = Icons.Default.PlayCircleOutline,
                         contentDescription = null,
-                        tint = if (isSelected) Color.White else TuneoTextSecondary,
+                        tint = if (isSelected) selectedTextColor else unselectedTextColor,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                 }
                 Text(
                     text = tab.label,
-                    color = if (isSelected) Color.White else TuneoTextSecondary,
+                    color = if (isSelected) selectedTextColor else unselectedTextColor,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -80,7 +90,7 @@ fun TabsRow(
                     modifier = Modifier
                         .width(1.dp)
                         .height(24.dp)
-                        .background(TuneoTextSecondary.copy(alpha = 0.3f))
+                        .background(unselectedTextColor.copy(alpha = 0.3f))
                 )
             }
         }

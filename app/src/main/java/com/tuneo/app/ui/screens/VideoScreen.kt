@@ -2,6 +2,7 @@ package com.tuneo.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -15,23 +16,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.tuneo.app.data.VideoItem
-import com.tuneo.app.ui.theme.TuneoBackground
-import com.tuneo.app.ui.theme.TuneoTextSecondary
+import com.tuneo.app.ui.theme.TuneoBackgroundDark
+import com.tuneo.app.ui.theme.TuneoBackgroundLight
+import com.tuneo.app.ui.theme.TuneoTextPrimaryDark
+import com.tuneo.app.ui.theme.TuneoTextPrimaryLight
+import com.tuneo.app.ui.theme.TuneoTextSecondaryDark
+import com.tuneo.app.ui.theme.TuneoTextSecondaryLight
 import java.util.concurrent.TimeUnit
 
 @Composable
 fun VideoScreen(videos: List<VideoItem>, onVideoClick: (VideoItem) -> Unit) {
-    androidx.compose.foundation.layout.Column(
+    val isDark = isSystemInDarkTheme()
+    val background = if (isDark) TuneoBackgroundDark else TuneoBackgroundLight
+    val textColor = if (isDark) TuneoTextPrimaryDark else TuneoTextPrimaryLight
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(TuneoBackground)
+            .background(background)
     ) {
         Row(
             modifier = Modifier
@@ -42,10 +50,10 @@ fun VideoScreen(videos: List<VideoItem>, onVideoClick: (VideoItem) -> Unit) {
         ) {
             Text(
                 text = "${videos.size} vidéos",
-                color = Color.White,
+                color = textColor,
                 fontSize = 15.sp
             )
-            Icon(Icons.Default.Folder, contentDescription = "Dossiers", tint = Color.White)
+            Icon(Icons.Default.Folder, contentDescription = "Dossiers", tint = textColor)
         }
 
         LazyVerticalGrid(
@@ -66,23 +74,25 @@ fun VideoScreen(videos: List<VideoItem>, onVideoClick: (VideoItem) -> Unit) {
 
 @Composable
 private fun VideoThumbnail(video: VideoItem, onClick: () -> Unit) {
-    androidx.compose.foundation.layout.Column(
+    val isDark = isSystemInDarkTheme()
+    val textColor = if (isDark) TuneoTextPrimaryDark else TuneoTextPrimaryLight
+    val secondaryColor = if (isDark) TuneoTextSecondaryDark else TuneoTextSecondaryLight
+
+    Column(
         modifier = Modifier.clickable { onClick() }
     ) {
-        Box {
-            AsyncImage(
-                model = video.thumbnailUri,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(10.dp))
-            )
-        }
+        AsyncImage(
+            model = video.thumbnailUri,
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(10.dp))
+        )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = video.displayName,
-            color = Color.White,
+            color = textColor,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
@@ -90,7 +100,7 @@ private fun VideoThumbnail(video: VideoItem, onClick: () -> Unit) {
         )
         Text(
             text = "${video.resolutionLabel} | ${formatDuration(video.duration)}",
-            color = TuneoTextSecondary,
+            color = secondaryColor,
             fontSize = 11.sp
         )
     }

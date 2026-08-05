@@ -17,12 +17,11 @@ class MediaScanner(private val context: Context) {
         val projection = arrayOf(
             MediaStore.Audio.Media._ID,
             MediaStore.Audio.Media.TITLE,
-            MediaStore.Audio.Media.DISPLAY_NAME,
             MediaStore.Audio.Media.ARTIST,
             MediaStore.Audio.Media.ALBUM,
             MediaStore.Audio.Media.DURATION,
             MediaStore.Audio.Media.ALBUM_ID,
-            MediaStore.Audio.Media.DATE_ADDED
+            MediaStore.Audio.Media.DISPLAY_NAME
         )
 
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
@@ -37,11 +36,11 @@ class MediaScanner(private val context: Context) {
         )?.use { cursor ->
             val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
             val titleCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
-            val displayNameCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
             val artistCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
             val albumCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
             val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
             val albumIdCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+            val displayNameCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idCol)
@@ -54,17 +53,20 @@ class MediaScanner(private val context: Context) {
                     albumId
                 )
 
+                // Fallback : si TITLE est vide ou générique ("audio"), on utilise
+                // le nom de fichier réel sans son extension.
                 val rawTitle = cursor.getString(titleCol)
                 val displayName = cursor.getString(displayNameCol)
-                val resolvedTitle = rawTitle
-                    ?.takeIf { it.isNotBlank() && !it.equals("Audio", ignoreCase = true) }
-                    ?: displayName?.substringBeforeLast('.')?.takeIf { it.isNotBlank() }
-                    ?: "Inconnu"
+                val cleanTitle = when {
+                    !rawTitle.isNullOrBlank() && !rawTitle.equals("audio", ignoreCase = true) -> rawTitle
+                    !displayName.isNullOrBlank() -> displayName.substringBeforeLast('.')
+                    else -> "Titre inconnu"
+                }
 
                 songs.add(
                     Song(
                         id = id,
-                        title = resolvedTitle,
+                        title = cleanTitle,
                         artist = cursor.getString(artistCol) ?: "Artiste inconnu",
                         album = cursor.getString(albumCol) ?: "",
                         duration = cursor.getLong(durationCol),

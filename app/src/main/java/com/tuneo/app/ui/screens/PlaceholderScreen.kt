@@ -1,6 +1,7 @@
 package com.tuneo.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Construction
@@ -11,15 +12,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.tuneo.app.ui.theme.TuneoBackground
-import com.tuneo.app.ui.theme.TuneoTextSecondary
+import com.tuneo.app.ui.theme.TuneoBackgroundDark
+import com.tuneo.app.ui.theme.TuneoBackgroundLight
+import com.tuneo.app.ui.theme.TuneoTextSecondaryDark
+import com.tuneo.app.ui.theme.TuneoTextSecondaryLight
 
 @Composable
 fun PlaceholderScreen(label: String) {
+    val isDark = isSystemInDarkTheme()
+    val background = if (isDark) TuneoBackgroundDark else TuneoBackgroundLight
+    val textColor = if (isDark) TuneoTextSecondaryDark else TuneoTextSecondaryLight
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(TuneoBackground)
+            .background(background)
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -27,13 +34,13 @@ fun PlaceholderScreen(label: String) {
         Icon(
             imageVector = Icons.Default.Construction,
             contentDescription = null,
-            tint = TuneoTextSecondary,
+            tint = textColor,
             modifier = Modifier.size(48.dp)
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "$label — bientôt disponible",
-            color = TuneoTextSecondary,
+            color = textColor,
             fontSize = 16.sp
         )
     }

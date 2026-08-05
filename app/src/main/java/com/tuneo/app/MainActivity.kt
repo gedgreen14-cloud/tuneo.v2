@@ -17,9 +17,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
 import com.tuneo.app.data.MediaScanner
 import com.tuneo.app.data.Song
 import com.tuneo.app.data.VideoItem
@@ -29,8 +26,9 @@ import com.tuneo.app.ui.components.TabsRow
 import com.tuneo.app.ui.components.TuneoTab
 import com.tuneo.app.ui.screens.*
 import com.tuneo.app.ui.theme.PlayerBackground
-import com.tuneo.app.ui.theme.TuneoBackground
+import com.tuneo.app.ui.theme.TuneoBackgroundDark
 import com.tuneo.app.ui.theme.TuneoBackgroundLight
+import com.tuneo.app.ui.theme.TuneoStatusBar
 import com.tuneo.app.ui.theme.TuneoTheme
 
 class MainActivity : ComponentActivity() {
@@ -89,31 +87,6 @@ fun TuneoApp(
     var videos by remember { mutableStateOf<List<VideoItem>>(emptyList()) }
     var selectedTab by remember { mutableStateOf(TuneoTab.SONGS) }
     var screen by remember { mutableStateOf(Screen.LIBRARY) }
-    var searchActive by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
-
-    // Status bar : le mode clair/sombre est géré nativement par
-    // values/themes.xml + values-night/themes.xml (fiable, piloté par l'OS).
-    // On ne l'override manuellement que sur Now Playing, dont le fond
-    // (vert foncé) est volontairement indépendant du thème clair/sombre.
-    val darkTheme = isSystemInDarkTheme()
-    val libraryBackground = if (darkTheme) TuneoBackground else TuneoBackgroundLight
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        val window = (view.context as android.app.Activity).window
-        SideEffect {
-            if (screen == Screen.NOW_PLAYING) {
-                window.statusBarColor = PlayerBackground.toArgb()
-                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
-            } else {
-                // Retour à Library : on restaure la couleur native du thème XML
-                // (values/themes.xml en clair, values-night/themes.xml en sombre)
-                // plutôt que de continuer à l'imposer depuis Kotlin.
-                window.statusBarColor = libraryBackground.toArgb()
-                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
-            }
-        }
-    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -139,37 +112,31 @@ fun TuneoApp(
         screen = Screen.LIBRARY
     }
 
+    val isDark = isSystemInDarkTheme()
+    val libraryBackground = if (isDark) TuneoBackgroundDark else TuneoBackgroundLight
+
+    // La status bar suit le fond de l'écran actuellement affiché :
+    // sombre + icônes claires pour la bibliothèque en mode dark,
+    // claire + icônes foncées en mode light, et toujours le vert foncé
+    // du lecteur sur l'écran Now Playing (peu importe le thème système).
+    when (screen) {
+        Screen.LIBRARY -> TuneoStatusBar(backgroundColor = libraryBackground, useDarkIcons = !isDark)
+        Screen.NOW_PLAYING -> TuneoStatusBar(backgroundColor = PlayerBackground, useDarkIcons = false)
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(libraryBackground)) {
         when (screen) {
             Screen.LIBRARY -> {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    TuneoHeader(
-                        searchActive = searchActive,
-                        searchQuery = searchQuery,
-                        onSearchQueryChange = { searchQuery = it },
-                        onToggleSearch = {
-                            searchActive = !searchActive
-                            if (!searchActive) searchQuery = ""
-                        }
-                    )
+                    TuneoHeader()
                     TabsRow(selected = selectedTab, onSelect = { selectedTab = it })
-
-                    val filteredSongs = remember(songs, searchQuery) {
-                        if (searchQuery.isBlank()) songs
-                        else songs.filter {
-                            it.title.contains(searchQuery, ignoreCase = true) ||
-                                it.artist.contains(searchQuery, ignoreCase = true)
-                        }
-                    }
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         when (selectedTab) {
                             TuneoTab.SONGS -> SongListScreen(
-                                songs = filteredSongs,
+                                songs = songs,
                                 onSongClick = { index ->
-                                    val song = filteredSongs[index]
-                                    val realIndex = songs.indexOf(song)
-                                    playerController.playQueue(songs, realIndex)
+                                    playerController.playQueue(songs, index)
                                     screen = Screen.NOW_PLAYING
                                 }
                             )
@@ -191,9 +158,7 @@ fun TuneoApp(
                         MiniPlayer(
                             song = song,
                             isPlaying = playerController.isPlaying,
-                            repeatMode = playerController.repeatMode,
                             onTogglePlay = { playerController.togglePlayPause() },
-                            onToggleRepeatMode = { playerController.toggleRepeatMode() },
                             onClick = { screen = Screen.NOW_PLAYING },
                             modifier = Modifier.align(Alignment.BottomCenter)
                         )

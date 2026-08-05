@@ -1,6 +1,7 @@
 package com.tuneo.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -13,15 +14,24 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tuneo.app.ui.theme.TuneoAccentBlue
-import com.tuneo.app.ui.theme.TuneoBackground
-import com.tuneo.app.ui.theme.TuneoTextSecondary
+import com.tuneo.app.ui.theme.TuneoBackgroundDark
+import com.tuneo.app.ui.theme.TuneoBackgroundLight
+import com.tuneo.app.ui.theme.TuneoTextPrimaryDark
+import com.tuneo.app.ui.theme.TuneoTextPrimaryLight
+import com.tuneo.app.ui.theme.TuneoTextSecondaryDark
+import com.tuneo.app.ui.theme.TuneoTextSecondaryLight
 
 @Composable
 fun PermissionScreen(onRequestPermission: () -> Unit) {
+    val isDark = isSystemInDarkTheme()
+    val background = if (isDark) TuneoBackgroundDark else TuneoBackgroundLight
+    val textColor = if (isDark) TuneoTextPrimaryDark else TuneoTextPrimaryLight
+    val secondaryColor = if (isDark) TuneoTextSecondaryDark else TuneoTextSecondaryLight
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(TuneoBackground)
+            .background(background)
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -35,7 +45,7 @@ fun PermissionScreen(onRequestPermission: () -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
         Text(
             "Accède à ta musique et tes vidéos",
-            color = androidx.compose.ui.graphics.Color.White,
+            color = textColor,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
@@ -43,7 +53,7 @@ fun PermissionScreen(onRequestPermission: () -> Unit) {
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             "Tuneo a besoin d'accéder à tes fichiers audio et vidéo pour construire ta bibliothèque locale.",
-            color = TuneoTextSecondary,
+            color = secondaryColor,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(32.dp))

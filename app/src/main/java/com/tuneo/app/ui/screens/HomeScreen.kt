@@ -119,7 +119,7 @@ private fun SongRow(song: Song, onClick: () -> Unit) {
             contentDescription = null,
             modifier = Modifier
                 .size(56.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(18.dp))
         )
         Spacer(modifier = Modifier.width(14.dp))
         Column {

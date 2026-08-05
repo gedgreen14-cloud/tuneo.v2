@@ -92,18 +92,26 @@ fun TuneoApp(
     var searchActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
-    // Status bar réactive : suit le fond réellement affiché (Library vs Now Playing)
-    // et le mode clair/sombre du système, recalculée à chaque changement d'écran.
+    // Status bar : le mode clair/sombre est géré nativement par
+    // values/themes.xml + values-night/themes.xml (fiable, piloté par l'OS).
+    // On ne l'override manuellement que sur Now Playing, dont le fond
+    // (vert foncé) est volontairement indépendant du thème clair/sombre.
     val darkTheme = isSystemInDarkTheme()
     val libraryBackground = if (darkTheme) TuneoBackground else TuneoBackgroundLight
-    val statusBarColor = if (screen == Screen.NOW_PLAYING) PlayerBackground else libraryBackground
     val view = LocalView.current
     if (!view.isInEditMode) {
         val window = (view.context as android.app.Activity).window
         SideEffect {
-            window.statusBarColor = statusBarColor.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars =
-                screen == Screen.LIBRARY && !darkTheme
+            if (screen == Screen.NOW_PLAYING) {
+                window.statusBarColor = PlayerBackground.toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            } else {
+                // Retour à Library : on restaure la couleur native du thème XML
+                // (values/themes.xml en clair, values-night/themes.xml en sombre)
+                // plutôt que de continuer à l'imposer depuis Kotlin.
+                window.statusBarColor = libraryBackground.toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            }
         }
     }
 

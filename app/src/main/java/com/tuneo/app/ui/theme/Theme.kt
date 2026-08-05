@@ -3,10 +3,8 @@ package com.tuneo.app.ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
 
 private val TuneoDarkColors = darkColorScheme(
     background = TuneoBackground,
@@ -16,17 +14,28 @@ private val TuneoDarkColors = darkColorScheme(
     onSurface = TuneoTextPrimary
 )
 
+private val TuneoLightColors = lightColorScheme(
+    background = TuneoBackgroundLight,
+    surface = TuneoSurfaceLight,
+    primary = TuneoAccentBlue,
+    onBackground = TuneoTextPrimaryLight,
+    onSurface = TuneoTextPrimaryLight
+)
+
+/**
+ * Le thème suit désormais le mode système (clair/sombre).
+ * La couleur de la status bar n'est plus fixée ici : elle est
+ * pilotée dynamiquement depuis TuneoApp (MainActivity.kt) car elle
+ * doit changer selon l'écran affiché (Library vs Now Playing), pas
+ * une seule fois au lancement de l'Activity.
+ */
 @Composable
 fun TuneoTheme(content: @Composable () -> Unit) {
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        val window = (view.context as android.app.Activity).window
-        window.statusBarColor = TuneoBackground.toArgb()
-        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
-    }
+    val darkTheme = isSystemInDarkTheme()
+    val colorScheme = if (darkTheme) TuneoDarkColors else TuneoLightColors
 
     MaterialTheme(
-        colorScheme = TuneoDarkColors,
+        colorScheme = colorScheme,
         typography = MaterialTheme.typography,
         content = content
     )

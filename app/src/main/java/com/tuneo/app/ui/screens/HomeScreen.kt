@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapVert
@@ -30,7 +31,12 @@ import com.tuneo.app.ui.theme.TuneoBackground
 import com.tuneo.app.ui.theme.TuneoTextSecondary
 
 @Composable
-fun TuneoHeader() {
+fun TuneoHeader(
+    searchActive: Boolean,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onToggleSearch: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -39,21 +45,46 @@ fun TuneoHeader() {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "Tuneo",
-            color = Color.White,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
-        )
+        if (searchActive) {
+            TextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Rechercher...", color = TuneoTextSecondary) },
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedIndicatorColor = TuneoTextSecondary,
+                    unfocusedIndicatorColor = TuneoTextSecondary.copy(alpha = 0.4f),
+                    cursorColor = Color.White
+                )
+            )
+        } else {
+            Text(
+                text = "Tuneo",
+                color = Color.White,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { }) {
-                Icon(Icons.Default.Search, contentDescription = "Rechercher", tint = Color.White)
+            IconButton(onClick = onToggleSearch) {
+                Icon(
+                    imageVector = if (searchActive) Icons.Default.Close else Icons.Default.Search,
+                    contentDescription = if (searchActive) "Fermer la recherche" else "Rechercher",
+                    tint = Color.White
+                )
             }
-            IconButton(onClick = { }) {
-                Icon(Icons.Default.SwapVert, contentDescription = "Trier", tint = Color.White)
-            }
-            IconButton(onClick = { }) {
-                Icon(Icons.Default.GpsFixed, contentDescription = "Cible", tint = Color.White)
+            if (!searchActive) {
+                IconButton(onClick = { }) {
+                    Icon(Icons.Default.SwapVert, contentDescription = "Trier", tint = Color.White)
+                }
+                IconButton(onClick = { }) {
+                    Icon(Icons.Default.GpsFixed, contentDescription = "Cible", tint = Color.White)
+                }
             }
         }
     }
@@ -88,7 +119,7 @@ private fun SongRow(song: Song, onClick: () -> Unit) {
             contentDescription = null,
             modifier = Modifier
                 .size(56.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(14.dp))
         )
         Spacer(modifier = Modifier.width(14.dp))
         Column {

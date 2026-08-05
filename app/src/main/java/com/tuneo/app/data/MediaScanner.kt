@@ -17,14 +17,16 @@ class MediaScanner(private val context: Context) {
         val projection = arrayOf(
             MediaStore.Audio.Media._ID,
             MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.DISPLAY_NAME,
             MediaStore.Audio.Media.ARTIST,
             MediaStore.Audio.Media.ALBUM,
             MediaStore.Audio.Media.DURATION,
-            MediaStore.Audio.Media.ALBUM_ID
+            MediaStore.Audio.Media.ALBUM_ID,
+            MediaStore.Audio.Media.DATE_ADDED
         )
 
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
-        val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
+        val sortOrder = "${MediaStore.Audio.Media.DATE_ADDED} DESC"
 
         context.contentResolver.query(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
@@ -35,6 +37,7 @@ class MediaScanner(private val context: Context) {
         )?.use { cursor ->
             val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
             val titleCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
+            val displayNameCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
             val artistCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
             val albumCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
             val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
@@ -51,10 +54,17 @@ class MediaScanner(private val context: Context) {
                     albumId
                 )
 
+                val rawTitle = cursor.getString(titleCol)
+                val displayName = cursor.getString(displayNameCol)
+                val resolvedTitle = rawTitle
+                    ?.takeIf { it.isNotBlank() && !it.equals("Audio", ignoreCase = true) }
+                    ?: displayName?.substringBeforeLast('.')?.takeIf { it.isNotBlank() }
+                    ?: "Inconnu"
+
                 songs.add(
                     Song(
                         id = id,
-                        title = cursor.getString(titleCol) ?: "Inconnu",
+                        title = resolvedTitle,
                         artist = cursor.getString(artistCol) ?: "Artiste inconnu",
                         album = cursor.getString(albumCol) ?: "",
                         duration = cursor.getLong(durationCol),

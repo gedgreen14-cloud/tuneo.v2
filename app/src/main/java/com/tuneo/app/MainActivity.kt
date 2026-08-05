@@ -21,8 +21,10 @@ import com.tuneo.app.data.MediaScanner
 import com.tuneo.app.data.Song
 import com.tuneo.app.data.VideoItem
 import com.tuneo.app.player.PlayerController
+import com.tuneo.app.ui.components.BottomNavBar
 import com.tuneo.app.ui.components.MiniPlayer
 import com.tuneo.app.ui.components.TabsRow
+import com.tuneo.app.ui.components.TuneoDestination
 import com.tuneo.app.ui.components.TuneoTab
 import com.tuneo.app.ui.screens.*
 import com.tuneo.app.ui.theme.PlayerBackground
@@ -72,7 +74,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { LIBRARY, NOW_PLAYING }
+private enum class Screen { MAIN, NOW_PLAYING }
 
 @Composable
 fun TuneoApp(
@@ -86,7 +88,8 @@ fun TuneoApp(
     var songs by remember { mutableStateOf<List<Song>>(emptyList()) }
     var videos by remember { mutableStateOf<List<VideoItem>>(emptyList()) }
     var selectedTab by remember { mutableStateOf(TuneoTab.SONGS) }
-    var screen by remember { mutableStateOf(Screen.LIBRARY) }
+    var screen by remember { mutableStateOf(Screen.MAIN) }
+    var selectedDestination by remember { mutableStateOf(TuneoDestination.BIBLIOTHEQUE) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -109,7 +112,7 @@ fun TuneoApp(
     }
 
     BackHandler(enabled = screen == Screen.NOW_PLAYING) {
-        screen = Screen.LIBRARY
+        screen = Screen.MAIN
     }
 
     val isDark = isSystemInDarkTheme()
@@ -120,49 +123,68 @@ fun TuneoApp(
     // claire + icônes foncées en mode light, et toujours le vert foncé
     // du lecteur sur l'écran Now Playing (peu importe le thème système).
     when (screen) {
-        Screen.LIBRARY -> TuneoStatusBar(backgroundColor = libraryBackground, useDarkIcons = !isDark)
+        Screen.MAIN -> TuneoStatusBar(backgroundColor = libraryBackground, useDarkIcons = !isDark)
         Screen.NOW_PLAYING -> TuneoStatusBar(backgroundColor = PlayerBackground, useDarkIcons = false)
     }
 
     Box(modifier = Modifier.fillMaxSize().background(libraryBackground)) {
         when (screen) {
-            Screen.LIBRARY -> {
+            Screen.MAIN -> {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    TuneoHeader()
-                    TabsRow(selected = selectedTab, onSelect = { selectedTab = it })
+                    // Contenu de la destination sélectionnée
+                    Box(modifier = Modifier.weight(1f)) {
+                        when (selectedDestination) {
+                            TuneoDestination.ACCUEIL -> PlaceholderScreen("Feed d'actualité")
 
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        when (selectedTab) {
-                            TuneoTab.SONGS -> SongListScreen(
-                                songs = songs,
-                                onSongClick = { index ->
-                                    playerController.playQueue(songs, index)
-                                    screen = Screen.NOW_PLAYING
+                            TuneoDestination.DECOUVERTE -> PlaceholderScreen("Découverte")
+
+                            TuneoDestination.BIBLIOTHEQUE -> Column(modifier = Modifier.fillMaxSize()) {
+                                TuneoHeader()
+                                TabsRow(selected = selectedTab, onSelect = { selectedTab = it })
+
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    when (selectedTab) {
+                                        TuneoTab.SONGS -> SongListScreen(
+                                            songs = songs,
+                                            onSongClick = { index ->
+                                                playerController.playQueue(songs, index)
+                                                screen = Screen.NOW_PLAYING
+                                            }
+                                        )
+                                        TuneoTab.VIDEOS -> VideoScreen(
+                                            videos = videos,
+                                            onVideoClick = { /* lecteur vidéo à venir */ }
+                                        )
+                                        TuneoTab.PLAYLISTS -> PlaceholderScreen("Playlists")
+                                        TuneoTab.FOLDERS -> PlaceholderScreen("Dossiers")
+                                        TuneoTab.ARTISTS -> PlaceholderScreen("Artists")
+                                        TuneoTab.ALBUMS -> PlaceholderScreen("Albums")
+                                    }
                                 }
+                            }
+
+                            TuneoDestination.NOTIFICATIONS -> PlaceholderScreen("Notifications")
+
+                            TuneoDestination.PROFIL -> PlaceholderScreen("Profil")
+                        }
+
+                        // Mini-player persistant, flotte au-dessus du contenu, juste au-dessus de la nav bar
+                        playerController.currentSong?.let { song ->
+                            MiniPlayer(
+                                song = song,
+                                isPlaying = playerController.isPlaying,
+                                onTogglePlay = { playerController.togglePlayPause() },
+                                onClick = { screen = Screen.NOW_PLAYING },
+                                modifier = Modifier.align(Alignment.BottomCenter)
                             )
-                            TuneoTab.VIDEOS -> VideoScreen(
-                                videos = videos,
-                                onVideoClick = { /* lecteur vidéo à venir */ }
-                            )
-                            TuneoTab.PLAYLISTS -> PlaceholderScreen("Playlists")
-                            TuneoTab.FOLDERS -> PlaceholderScreen("Dossiers")
-                            TuneoTab.ARTISTS -> PlaceholderScreen("Artists")
-                            TuneoTab.ALBUMS -> PlaceholderScreen("Albums")
                         }
                     }
-                }
 
-                // Mini-player persistant en bas, visible si une chanson est chargée
-                playerController.currentSong?.let { song ->
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        MiniPlayer(
-                            song = song,
-                            isPlaying = playerController.isPlaying,
-                            onTogglePlay = { playerController.togglePlayPause() },
-                            onClick = { screen = Screen.NOW_PLAYING },
-                            modifier = Modifier.align(Alignment.BottomCenter)
-                        )
-                    }
+                    // Barre de navigation, toujours visible en bas sur l'écran principal
+                    BottomNavBar(
+                        selected = selectedDestination,
+                        onSelect = { selectedDestination = it }
+                    )
                 }
             }
 

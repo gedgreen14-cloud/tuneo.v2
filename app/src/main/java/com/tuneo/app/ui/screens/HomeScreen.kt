@@ -45,7 +45,7 @@ fun TuneoHeader() {
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold
         )
-        Row(horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { }) {
                 Icon(Icons.Default.Search, contentDescription = "Rechercher", tint = Color.White)
             }

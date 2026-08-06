@@ -9,6 +9,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -47,16 +50,31 @@ fun NowPlayingScreen(
             .background(backgroundColor)
             .padding(horizontal = 24.dp, vertical = 32.dp)
     ) {
-        // Barre du haut : bouton "Partager ce que j'écoute" à droite
+        // Barre du haut : card "Partager avec mes amis" façon iOS, alignée à droite
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End
         ) {
-            IconButton(onClick = onShareClick) {
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(accentColor.copy(alpha = 0.12f))
+                    .clickable(onClick = onShareClick)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = "Partager ce que j'écoute",
-                    tint = accentColor
+                    imageVector = Icons.Outlined.Share,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Partager avec mes amis",
+                    color = accentColor,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
@@ -69,8 +87,8 @@ fun NowPlayingScreen(
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(16.dp))
+                .aspectRatio(0.85f)
+                .clip(RoundedCornerShape(28.dp))
         )
 
         Spacer(modifier = Modifier.height(28.dp))
@@ -105,7 +123,7 @@ fun NowPlayingScreen(
                 }
                 IconButton(onClick = { /* menu - à venir */ }) {
                     Icon(
-                        imageVector = Icons.Default.MoreVert,
+                        imageVector = Icons.Outlined.MoreVert,
                         contentDescription = "Plus d'options",
                         tint = secondaryColor
                     )
@@ -117,16 +135,26 @@ fun NowPlayingScreen(
 
         // Barre de progression
         val durationMs = song.duration.coerceAtLeast(1L)
-        Slider(
-            value = positionMs.toFloat(),
-            onValueChange = { onSeek(it.toLong()) },
-            valueRange = 0f..durationMs.toFloat(),
-            colors = SliderDefaults.colors(
-                thumbColor = accentColor,
-                activeTrackColor = accentColor,
-                inactiveTrackColor = accentColor.copy(alpha = 0.25f)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .height(18.dp)
+                    .background(accentColor)
             )
-        )
+            Spacer(modifier = Modifier.width(8.dp))
+            Slider(
+                modifier = Modifier.weight(1f),
+                value = positionMs.toFloat(),
+                onValueChange = { onSeek(it.toLong()) },
+                valueRange = 0f..durationMs.toFloat(),
+                colors = SliderDefaults.colors(
+                    thumbColor = accentColor,
+                    activeTrackColor = accentColor,
+                    inactiveTrackColor = accentColor.copy(alpha = 0.25f)
+                )
+            )
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -184,7 +212,7 @@ fun NowPlayingScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.Tune,
+                imageVector = Icons.Outlined.Tune,
                 contentDescription = "Égaliseur",
                 tint = secondaryColor
             )

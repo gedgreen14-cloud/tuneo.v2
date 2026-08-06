@@ -8,8 +8,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,8 +33,7 @@ fun MiniPlayer(
     isShuffleEnabled: Boolean,
     repeatMode: Int,
     onTogglePlay: () -> Unit,
-    onToggleShuffle: () -> Unit,
-    onCycleRepeat: () -> Unit,
+    onCyclePlaybackMode: () -> Unit,
     onClick: () -> Unit,
     backgroundColor: Color,
     contentColor: Color,
@@ -64,19 +63,26 @@ fun MiniPlayer(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
-        IconButton(onClick = onToggleShuffle) {
-            Icon(
-                imageVector = Icons.Default.Shuffle,
-                contentDescription = "Aléatoire",
-                tint = if (isShuffleEnabled) contentColor else contentColor.copy(alpha = 0.4f)
-            )
-        }
-        IconButton(onClick = onCycleRepeat) {
-            Icon(
-                imageVector = if (repeatMode == Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
-                contentDescription = "Répéter",
-                tint = if (repeatMode == Player.REPEAT_MODE_OFF) contentColor.copy(alpha = 0.4f) else contentColor
-            )
+        // Un seul bouton cyclique : Normal -> Répéter cette chanson -> Aléatoire -> Normal
+        // (voir PlayerController.cyclePlaybackMode, comportement calqué sur Lark Player)
+        IconButton(onClick = onCyclePlaybackMode) {
+            when {
+                repeatMode == Player.REPEAT_MODE_ONE -> Icon(
+                    imageVector = Icons.Default.RepeatOne,
+                    contentDescription = "Répéter cette chanson",
+                    tint = contentColor
+                )
+                isShuffleEnabled -> Icon(
+                    imageVector = Icons.Default.Shuffle,
+                    contentDescription = "Lecture aléatoire",
+                    tint = contentColor
+                )
+                else -> Icon(
+                    imageVector = Icons.Default.Repeat,
+                    contentDescription = "Lecture normale",
+                    tint = contentColor.copy(alpha = 0.4f)
+                )
+            }
         }
         IconButton(onClick = onTogglePlay) {
             Icon(

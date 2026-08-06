@@ -116,24 +116,35 @@ class PlayerController(private val context: Context) {
         positionMs = ms
     }
 
-    fun toggleShuffle() {
+    /**
+     * Un seul bouton cyclique, comme sur Lark Player (référence) :
+     * Normal (lecture séquentielle) -> Répéter cette chanson (icône avec "1")
+     * -> Aléatoire -> retour à Normal.
+     * Shuffle et repeat-one sont mutuellement exclusifs : activer l'un désactive l'autre.
+     */
+    fun cyclePlaybackMode() {
         controller?.let {
-            val newValue = !it.shuffleModeEnabled
-            it.shuffleModeEnabled = newValue
-            isShuffleEnabled = newValue
-        }
-    }
-
-    /** Cycle : désactivé -> répéter tout -> répéter un seul morceau -> désactivé */
-    fun cycleRepeatMode() {
-        controller?.let {
-            val next = when (it.repeatMode) {
-                Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
-                Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
-                else -> Player.REPEAT_MODE_OFF
+            when {
+                it.repeatMode == Player.REPEAT_MODE_OFF && !it.shuffleModeEnabled -> {
+                    // Normal -> Répéter cette chanson
+                    it.repeatMode = Player.REPEAT_MODE_ONE
+                    repeatMode = Player.REPEAT_MODE_ONE
+                }
+                it.repeatMode == Player.REPEAT_MODE_ONE -> {
+                    // Répéter cette chanson -> Aléatoire
+                    it.repeatMode = Player.REPEAT_MODE_OFF
+                    repeatMode = Player.REPEAT_MODE_OFF
+                    it.shuffleModeEnabled = true
+                    isShuffleEnabled = true
+                }
+                else -> {
+                    // Aléatoire -> Normal
+                    it.shuffleModeEnabled = false
+                    isShuffleEnabled = false
+                    it.repeatMode = Player.REPEAT_MODE_OFF
+                    repeatMode = Player.REPEAT_MODE_OFF
+                }
             }
-            it.repeatMode = next
-            repeatMode = next
         }
     }
 

@@ -10,13 +10,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.GpsFixed
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,7 +54,7 @@ fun TuneoHeader() {
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { }) {
-                Icon(Icons.Default.Search, contentDescription = "Rechercher", tint = textColor)
+                Icon(Icons.Outlined.Search, contentDescription = "Rechercher", tint = textColor)
             }
             IconButton(onClick = { }) {
                 Icon(Icons.Default.SwapVert, contentDescription = "Trier", tint = textColor)
@@ -109,14 +110,35 @@ private fun SongRow(song: Song, isCurrent: Boolean, isPlaying: Boolean, onClick:
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
-            model = song.albumArtUri,
-            contentDescription = null,
+        Box(
             modifier = Modifier
                 .size(56.dp)
                 .aspectRatio(1f)
                 .clip(RoundedCornerShape(14.dp))
-        )
+        ) {
+            AsyncImage(
+                model = song.albumArtUri,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize()
+            )
+            if (isCurrent) {
+                // Voile sombre + égaliseur par-dessus la pochette, comme sur Lark Player,
+                // pour indiquer sans ambiguïté quelle chanson joue actuellement.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.45f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Equalizer,
+                        contentDescription = if (isPlaying) "En cours de lecture" else "En pause",
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+        }
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -145,15 +167,6 @@ private fun SongRow(song: Song, isCurrent: Boolean, isPlaying: Boolean, onClick:
                     overflow = TextOverflow.Ellipsis
                 )
             }
-        }
-        if (isCurrent) {
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                imageVector = Icons.Default.Equalizer,
-                contentDescription = if (isPlaying) "En cours de lecture" else "En pause",
-                tint = TuneoAccentBlue,
-                modifier = Modifier.size(20.dp)
-            )
         }
     }
 }

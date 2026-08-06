@@ -10,11 +10,11 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.unit.dp
 import kotlin.random.Random
 
@@ -60,8 +60,7 @@ fun WaveformView(
                 start = Offset(x, size.height / 2f - barHeight / 2f),
                 end = Offset(x, size.height / 2f + barHeight / 2f),
                 strokeWidth = barWidth,
-                cap = androidx.compose.ui.graphics.StrokeCap.Round,
-                pointMode = PointMode.Lines
+                cap = androidx.compose.ui.graphics.StrokeCap.Round
             )
         }
     }

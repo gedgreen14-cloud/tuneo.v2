@@ -43,6 +43,16 @@ android {
     }
 }
 
+// Une dépendance transitive (probablement tirée par le SDK Supabase/Ktor) résout
+// androidx.browser:browser vers une version 1.9.x qui exige compileSdk 36 + AGP 8.9.1+.
+// On force la dernière version stable compatible avec compileSdk 35, pour éviter
+// d'avoir à remonter compileSdk à chaque nouvelle version transitive publiée.
+configurations.all {
+    resolutionStrategy {
+        force("androidx.browser:browser:1.8.0")
+    }
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")

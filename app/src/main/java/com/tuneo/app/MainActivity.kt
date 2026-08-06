@@ -31,7 +31,8 @@ import com.tuneo.app.ui.components.TuneoDestination
 import com.tuneo.app.ui.components.TuneoTab
 import com.tuneo.app.ui.screens.*
 import com.tuneo.app.ui.theme.FeedBackground
-import com.tuneo.app.ui.theme.PlayerBackground
+import com.tuneo.app.ui.theme.contentColorFor
+import com.tuneo.app.ui.theme.rememberDominantColor
 import com.tuneo.app.ui.theme.TuneoBackgroundDark
 import com.tuneo.app.ui.theme.TuneoBackgroundLight
 import com.tuneo.app.ui.theme.TuneoStatusBar
@@ -173,9 +174,14 @@ fun TuneoApp(
     val libraryBackground = if (isDark) TuneoBackgroundDark else TuneoBackgroundLight
 
     // La status bar suit le fond de l'écran actuellement affiché.
+    // Sur Now Playing, ce fond est dynamique (couleur dominante de la pochette en cours).
+    val nowPlayingBackground = playerController.currentSong?.let { rememberDominantColor(it.albumArtUri) }
     when (screen) {
         Screen.MAIN -> TuneoStatusBar(backgroundColor = libraryBackground, useDarkIcons = !isDark)
-        Screen.NOW_PLAYING -> TuneoStatusBar(backgroundColor = PlayerBackground, useDarkIcons = false)
+        Screen.NOW_PLAYING -> TuneoStatusBar(
+            backgroundColor = nowPlayingBackground ?: libraryBackground,
+            useDarkIcons = nowPlayingBackground?.let { contentColorFor(it) == androidx.compose.ui.graphics.Color(0xFF1A1A1A) } ?: !isDark
+        )
         Screen.LOGIN, Screen.SIGN_UP, Screen.SHARE_CAPTION ->
             TuneoStatusBar(backgroundColor = FeedBackground, useDarkIcons = false)
     }
@@ -210,6 +216,8 @@ fun TuneoApp(
                                     when (selectedTab) {
                                         TuneoTab.SONGS -> SongListScreen(
                                             songs = songs,
+                                            currentSong = playerController.currentSong,
+                                            isPlaying = playerController.isPlaying,
                                             onSongClick = { index ->
                                                 playerController.playQueue(songs, index)
                                                 screen = Screen.NOW_PLAYING
@@ -234,11 +242,19 @@ fun TuneoApp(
 
                         // Mini-player persistant, flotte au-dessus du contenu, juste au-dessus de la nav bar
                         playerController.currentSong?.let { song ->
+                            val miniBackground = rememberDominantColor(song.albumArtUri)
+                            val miniContent = contentColorFor(miniBackground)
                             MiniPlayer(
                                 song = song,
                                 isPlaying = playerController.isPlaying,
+                                isShuffleEnabled = playerController.isShuffleEnabled,
+                                repeatMode = playerController.repeatMode,
                                 onTogglePlay = { playerController.togglePlayPause() },
+                                onToggleShuffle = { playerController.toggleShuffle() },
+                                onCycleRepeat = { playerController.cycleRepeatMode() },
                                 onClick = { screen = Screen.NOW_PLAYING },
+                                backgroundColor = miniBackground,
+                                contentColor = miniContent,
                                 modifier = Modifier.align(Alignment.BottomCenter)
                             )
                         }

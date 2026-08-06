@@ -22,9 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.tuneo.app.data.Song
-import com.tuneo.app.ui.theme.PlayerAccent
-import com.tuneo.app.ui.theme.PlayerBackground
-import com.tuneo.app.ui.theme.PlayerTextSecondary
+import com.tuneo.app.ui.theme.contentColorFor
+import com.tuneo.app.ui.theme.rememberDominantColor
 import java.util.concurrent.TimeUnit
 
 @Composable
@@ -38,10 +37,14 @@ fun NowPlayingScreen(
     onSeek: (Long) -> Unit,
     onShareClick: () -> Unit = {}
 ) {
+    val backgroundColor = rememberDominantColor(song.albumArtUri)
+    val accentColor = contentColorFor(backgroundColor)
+    val secondaryColor = accentColor.copy(alpha = 0.7f)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PlayerBackground)
+            .background(backgroundColor)
             .padding(horizontal = 24.dp, vertical = 32.dp)
     ) {
         // Barre du haut : bouton "Partager ce que j'écoute" à droite
@@ -53,7 +56,7 @@ fun NowPlayingScreen(
                 Icon(
                     imageVector = Icons.Default.Share,
                     contentDescription = "Partager ce que j'écoute",
-                    tint = PlayerAccent
+                    tint = accentColor
                 )
             }
         }
@@ -74,8 +77,8 @@ fun NowPlayingScreen(
 
         // Titre + artiste + actions
         Text(
-            text = song.title.uppercase(),
-            color = PlayerAccent,
+            text = song.title,
+            color = accentColor,
             fontSize = 24.sp,
             fontWeight = FontWeight.ExtraBold,
             maxLines = 2,
@@ -89,7 +92,7 @@ fun NowPlayingScreen(
         ) {
             Text(
                 text = song.artist,
-                color = PlayerTextSecondary,
+                color = secondaryColor,
                 fontSize = 16.sp
             )
             Row {
@@ -97,14 +100,14 @@ fun NowPlayingScreen(
                     Icon(
                         imageVector = Icons.Outlined.FavoriteBorder,
                         contentDescription = "Aimer",
-                        tint = PlayerTextSecondary
+                        tint = secondaryColor
                     )
                 }
                 IconButton(onClick = { /* menu - à venir */ }) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "Plus d'options",
-                        tint = PlayerTextSecondary
+                        tint = secondaryColor
                     )
                 }
             }
@@ -119,17 +122,17 @@ fun NowPlayingScreen(
             onValueChange = { onSeek(it.toLong()) },
             valueRange = 0f..durationMs.toFloat(),
             colors = SliderDefaults.colors(
-                thumbColor = PlayerAccent,
-                activeTrackColor = PlayerAccent,
-                inactiveTrackColor = PlayerAccent.copy(alpha = 0.25f)
+                thumbColor = accentColor,
+                activeTrackColor = accentColor,
+                inactiveTrackColor = accentColor.copy(alpha = 0.25f)
             )
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(formatDuration(positionMs), color = PlayerTextSecondary, fontSize = 12.sp)
-            Text(formatDuration(durationMs), color = PlayerTextSecondary, fontSize = 12.sp)
+            Text(formatDuration(positionMs), color = secondaryColor, fontSize = 12.sp)
+            Text(formatDuration(durationMs), color = secondaryColor, fontSize = 12.sp)
         }
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -144,7 +147,7 @@ fun NowPlayingScreen(
             Icon(
                 imageVector = Icons.Default.FastRewind,
                 contentDescription = "Précédent",
-                tint = PlayerAccent,
+                tint = accentColor,
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(50))
@@ -154,7 +157,7 @@ fun NowPlayingScreen(
             Icon(
                 imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                 contentDescription = "Lecture / Pause",
-                tint = PlayerAccent,
+                tint = accentColor,
                 modifier = Modifier
                     .size(64.dp)
                     .clip(RoundedCornerShape(50))
@@ -164,7 +167,7 @@ fun NowPlayingScreen(
             Icon(
                 imageVector = Icons.Default.FastForward,
                 contentDescription = "Suivant",
-                tint = PlayerAccent,
+                tint = accentColor,
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(50))
@@ -183,27 +186,27 @@ fun NowPlayingScreen(
             Icon(
                 imageVector = Icons.Default.Tune,
                 contentDescription = "Égaliseur",
-                tint = PlayerTextSecondary
+                tint = secondaryColor
             )
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
-                    .background(PlayerAccent.copy(alpha = 0.12f))
+                    .background(accentColor.copy(alpha = 0.12f))
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Icon(
                     imageVector = Icons.Outlined.FavoriteBorder,
                     contentDescription = null,
-                    tint = PlayerTextSecondary,
+                    tint = secondaryColor,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Paroles", color = PlayerTextSecondary, fontSize = 14.sp)
+                Text("Paroles", color = secondaryColor, fontSize = 14.sp)
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.List,
                 contentDescription = "File d'attente",
-                tint = PlayerTextSecondary
+                tint = secondaryColor
             )
         }
     }

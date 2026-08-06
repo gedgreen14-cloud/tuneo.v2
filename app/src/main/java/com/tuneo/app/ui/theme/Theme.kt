@@ -34,7 +34,8 @@ fun TuneoTheme(content: @Composable () -> Unit) {
 
     MaterialTheme(
         colorScheme = colors,
-        typography = MaterialTheme.typography,
+        typography = TuneoTypography,
+        shapes = TuneoShapes,
         content = content
     )
 }

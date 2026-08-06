@@ -30,6 +30,10 @@ class PlayerController(private val context: Context) {
         private set
     var positionMs by mutableStateOf(0L)
         private set
+    var isShuffleEnabled by mutableStateOf(false)
+        private set
+    var repeatMode by mutableStateOf(Player.REPEAT_MODE_OFF)
+        private set
 
     private var queue: List<Song> = emptyList()
     private var currentIndex: Int = -1
@@ -54,7 +58,15 @@ class PlayerController(private val context: Context) {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
                 }
+                override fun onShuffleModeEnabledChanged(shuffleEnabled: Boolean) {
+                    isShuffleEnabled = shuffleEnabled
+                }
+                override fun onRepeatModeChanged(mode: Int) {
+                    repeatMode = mode
+                }
             })
+            isShuffleEnabled = controller?.shuffleModeEnabled ?: false
+            repeatMode = controller?.repeatMode ?: Player.REPEAT_MODE_OFF
             positionHandler.post(positionUpdater)
             onReady()
         }, MoreExecutors.directExecutor())
@@ -102,6 +114,27 @@ class PlayerController(private val context: Context) {
     fun seekTo(ms: Long) {
         controller?.seekTo(ms)
         positionMs = ms
+    }
+
+    fun toggleShuffle() {
+        controller?.let {
+            val newValue = !it.shuffleModeEnabled
+            it.shuffleModeEnabled = newValue
+            isShuffleEnabled = newValue
+        }
+    }
+
+    /** Cycle : désactivé -> répéter tout -> répéter un seul morceau -> désactivé */
+    fun cycleRepeatMode() {
+        controller?.let {
+            val next = when (it.repeatMode) {
+                Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                else -> Player.REPEAT_MODE_OFF
+            }
+            it.repeatMode = next
+            repeatMode = next
+        }
     }
 
     fun release() {

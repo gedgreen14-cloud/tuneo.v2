@@ -85,6 +85,7 @@ dependencies {
     // Image loading (for embedded audio/video thumbnails)
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("io.coil-kt:coil-video:2.6.0")
+    implementation("androidx.palette:palette-ktx:1.0.0")
 
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
 

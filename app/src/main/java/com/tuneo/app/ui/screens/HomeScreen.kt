@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapVert
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.tuneo.app.data.Song
+import com.tuneo.app.ui.theme.TuneoAccentBlue
 import com.tuneo.app.ui.theme.TuneoBackgroundDark
 import com.tuneo.app.ui.theme.TuneoBackgroundLight
 import com.tuneo.app.ui.theme.TuneoTextSecondaryDark
@@ -64,7 +66,12 @@ fun TuneoHeader() {
 }
 
 @Composable
-fun SongListScreen(songs: List<Song>, onSongClick: (Int) -> Unit) {
+fun SongListScreen(
+    songs: List<Song>,
+    currentSong: Song? = null,
+    isPlaying: Boolean = false,
+    onSongClick: (Int) -> Unit
+) {
     val isDark = isSystemInDarkTheme()
     val background = if (isDark) TuneoBackgroundDark else TuneoBackgroundLight
 
@@ -75,17 +82,25 @@ fun SongListScreen(songs: List<Song>, onSongClick: (Int) -> Unit) {
     ) {
         items(songs.size) { index ->
             val song = songs[index]
-            SongRow(song = song, onClick = { onSongClick(index) })
+            val isCurrent = currentSong != null && song.id == currentSong.id
+            SongRow(
+                song = song,
+                isCurrent = isCurrent,
+                isPlaying = isCurrent && isPlaying,
+                onClick = { onSongClick(index) }
+            )
         }
         item { Spacer(modifier = Modifier.height(80.dp)) } // place pour le mini-player
     }
 }
 
 @Composable
-private fun SongRow(song: Song, onClick: () -> Unit) {
+private fun SongRow(song: Song, isCurrent: Boolean, isPlaying: Boolean, onClick: () -> Unit) {
     val isDark = isSystemInDarkTheme()
-    val textColor = if (isDark) TuneoTextPrimaryDark else TuneoTextPrimaryLight
-    val secondaryColor = if (isDark) TuneoTextSecondaryDark else TuneoTextSecondaryLight
+    val defaultTextColor = if (isDark) TuneoTextPrimaryDark else TuneoTextPrimaryLight
+    val defaultSecondaryColor = if (isDark) TuneoTextSecondaryDark else TuneoTextSecondaryLight
+    val textColor = if (isCurrent) TuneoAccentBlue else defaultTextColor
+    val secondaryColor = if (isCurrent) TuneoAccentBlue.copy(alpha = 0.8f) else defaultSecondaryColor
 
     Row(
         modifier = Modifier
@@ -99,10 +114,11 @@ private fun SongRow(song: Song, onClick: () -> Unit) {
             contentDescription = null,
             modifier = Modifier
                 .size(56.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(14.dp))
         )
         Spacer(modifier = Modifier.width(14.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = song.title,
                 color = textColor,
@@ -129,6 +145,15 @@ private fun SongRow(song: Song, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
             }
+        }
+        if (isCurrent) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                imageVector = Icons.Default.Equalizer,
+                contentDescription = if (isPlaying) "En cours de lecture" else "En pause",
+                tint = TuneoAccentBlue,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

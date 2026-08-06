@@ -35,7 +35,8 @@ fun NowPlayingScreen(
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
-    onSeek: (Long) -> Unit
+    onSeek: (Long) -> Unit,
+    onShareClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -43,6 +44,22 @@ fun NowPlayingScreen(
             .background(PlayerBackground)
             .padding(horizontal = 24.dp, vertical = 32.dp)
     ) {
+        // Barre du haut : bouton "Partager ce que j'écoute" à droite
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            IconButton(onClick = onShareClick) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Partager ce que j'écoute",
+                    tint = PlayerAccent
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         // Pochette
         AsyncImage(
             model = song.albumArtUri,

@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -67,4 +68,17 @@ dependencies {
     implementation("io.coil-kt:coil-video:2.6.0")
 
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
+
+    // Supabase (backend : auth, base de données, storage, temps réel)
+    implementation(platform("io.github.jan-tennert.supabase:bom:2.6.0"))
+    implementation("io.github.jan-tennert.supabase:postgrest-kt")
+    implementation("io.github.jan-tennert.supabase:auth-kt")
+    implementation("io.github.jan-tennert.supabase:storage-kt")
+    implementation("io.github.jan-tennert.supabase:realtime-kt")
+
+    // Ktor (client HTTP requis par le SDK Supabase sur Android)
+    implementation("io.ktor:ktor-client-android:2.3.12")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 }

@@ -16,7 +16,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.unit.dp
-import kotlin.math.sin
 import kotlin.random.Random
 
 /**
@@ -30,11 +29,14 @@ fun WaveformView(
     barCount: Int = 28
 ) {
     val heights = remember {
-        List(barCount) { i -> 0.25f + 0.75f * ((sin(i * 0.9) + 1f) / 2f).toFloat() + Random(i).nextFloat() * 0.15f }
+        List(barCount) { i ->
+            val base = ((kotlin.math.sin(i * 0.9) + 1.0) / 2.0).toFloat()
+            0.25f + 0.75f * base + Random(i).nextFloat() * 0.15f
+        }
     }
 
     val transition = rememberInfiniteTransition(label = "waveform")
-    val phase by transition.animateFloat(
+    val phase: Float by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
@@ -48,7 +50,8 @@ fun WaveformView(
         val barWidth = size.width / (barCount * 1.6f)
         val gap = barWidth * 0.6f
         heights.forEachIndexed { index, baseHeight ->
-            val wobble = 0.55f + 0.45f * sin((phase * 6.28f) + index * 0.5f)
+            val wobbleRaw = kotlin.math.sin(((phase * 6.28f) + index * 0.5f).toDouble()).toFloat()
+            val wobble = 0.55f + 0.45f * wobbleRaw
             val barHeight = (size.height * baseHeight * wobble).coerceIn(size.height * 0.12f, size.height)
             val x = index * (barWidth + gap)
             val alpha = 0.45f + 0.55f * baseHeight

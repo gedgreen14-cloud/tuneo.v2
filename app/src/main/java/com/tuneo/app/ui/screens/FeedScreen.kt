@@ -61,16 +61,23 @@ fun FeedScreen(
     var followingIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var topLikers by remember { mutableStateOf<Map<String, List<Profile>>>(emptyMap()) }
     var activeCommentPostId by remember { mutableStateOf<String?>(null) }
+    // Distingue "en train de charger" de "chargé mais réellement vide", pour ne pas
+    // afficher "Aucune publication" pendant le bref instant où la requête réseau
+    // est encore en cours au premier affichage de l'écran.
+    var isLoading by remember { mutableStateOf(true) }
 
     fun reload() {
         scope.launch {
-            posts = feedRepository.fetchFeed()
+            isLoading = true
+            val fetchedPosts = feedRepository.fetchFeed()
+            posts = fetchedPosts
             stories = feedRepository.fetchStories()
             if (myProfile != null) {
                 likedPostIds = feedRepository.likedPostIds(myProfile.id)
                 followingIds = feedRepository.followingIds(myProfile.id)
             }
-            topLikers = feedRepository.fetchTopLikers(posts.map { it.id })
+            topLikers = feedRepository.fetchTopLikers(fetchedPosts.map { it.id })
+            isLoading = false
         }
     }
 
@@ -90,7 +97,11 @@ fun FeedScreen(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        if (posts.isEmpty()) {
+        if (isLoading) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = FeedAccentPurple)
+            }
+        } else if (posts.isEmpty()) {
             val secondaryColor = if (isDark) FeedTextSecondaryDark else FeedTextSecondaryLight
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(

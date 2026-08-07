@@ -13,6 +13,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
+import com.tuneo.app.data.PlaylistRepository
 import com.tuneo.app.data.Song
 
 /**
@@ -23,6 +24,7 @@ import com.tuneo.app.data.Song
 class PlayerController(private val context: Context) {
 
     private var controller: MediaController? = null
+    private val playlistRepository = PlaylistRepository(context)
 
     var currentSong by mutableStateOf<Song?>(null)
         private set
@@ -36,6 +38,7 @@ class PlayerController(private val context: Context) {
         private set
 
     private var queue: List<Song> = emptyList()
+    private var queueById: Map<String, Song> = emptyMap()
     private var currentIndex: Int = -1
 
     private val positionHandler = Handler(Looper.getMainLooper())
@@ -64,6 +67,18 @@ class PlayerController(private val context: Context) {
                 override fun onRepeatModeChanged(mode: Int) {
                     repeatMode = mode
                 }
+                // Se déclenche pour TOUT changement de morceau : next()/previous() manuels,
+                // fin de piste automatique, action depuis la notification système,
+                // Bluetooth/Android Auto, etc. C'est la seule source fiable pour garder
+                // currentSong synchronisé en temps réel avec ce qui joue réellement.
+                override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    val mediaId = mediaItem?.mediaId
+                    currentSong = mediaId?.let { queueById[it] }
+                    currentIndex = controller?.currentMediaItemIndex ?: currentIndex
+                    // Alimente l'historique local pour les playlists automatiques
+                    // "Lues récemment" et "Les plus jouées".
+                    currentSong?.let { playlistRepository.recordPlayback(it.id) }
+                }
             })
             isShuffleEnabled = controller?.shuffleModeEnabled ?: false
             repeatMode = controller?.repeatMode ?: Player.REPEAT_MODE_OFF
@@ -74,9 +89,11 @@ class PlayerController(private val context: Context) {
 
     fun playQueue(songs: List<Song>, startIndex: Int) {
         queue = songs
+        queueById = songs.associateBy { it.id.toString() }
         currentIndex = startIndex
         val mediaItems = songs.map { song ->
             MediaItem.Builder()
+                .setMediaId(song.id.toString())
                 .setUri(song.uri)
                 .setMediaMetadata(
                     MediaMetadata.Builder()
@@ -91,6 +108,7 @@ class PlayerController(private val context: Context) {
         controller?.prepare()
         controller?.play()
         currentSong = songs.getOrNull(startIndex)
+        currentSong?.let { playlistRepository.recordPlayback(it.id) }
     }
 
     fun togglePlayPause() {
@@ -100,15 +118,13 @@ class PlayerController(private val context: Context) {
     }
 
     fun next() {
+        // currentSong/currentIndex sont mis à jour par onMediaItemTransition,
+        // qui se déclenche de façon fiable après ce seek.
         controller?.seekToNextMediaItem()
-        currentIndex = (currentIndex + 1).coerceAtMost(queue.size - 1)
-        currentSong = queue.getOrNull(currentIndex)
     }
 
     fun previous() {
         controller?.seekToPreviousMediaItem()
-        currentIndex = (currentIndex - 1).coerceAtLeast(0)
-        currentSong = queue.getOrNull(currentIndex)
     }
 
     fun seekTo(ms: Long) {

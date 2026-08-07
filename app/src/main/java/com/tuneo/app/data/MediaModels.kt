@@ -10,7 +10,10 @@ data class Song(
     val duration: Long, // ms
     val uri: Uri,
     val albumArtUri: Uri?,
-    val hasLyrics: Boolean = false
+    val hasLyrics: Boolean = false,
+    // Dossier réel du fichier sur le stockage (ex: "Music/Rock"), utilisé pour
+    // regrouper les morceaux par dossier dans l'onglet Dossiers.
+    val folderPath: String = ""
 )
 
 data class VideoItem(

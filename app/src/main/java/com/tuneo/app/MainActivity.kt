@@ -1,6 +1,7 @@
 package com.tuneo.app
 
 import android.Manifest
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.tuneo.app.data.AuthRepository
@@ -45,6 +47,11 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var playerController: PlayerController
 
+    // Incrémenté à chaque intent demandant l'ouverture directe de Now Playing
+    // (tap sur la notification ou le lecteur externe). Un compteur plutôt qu'un
+    // booléen pour que TuneoApp puisse réagir même à des taps consécutifs.
+    private val openNowPlayingRequests = mutableIntStateOf(0)
+
     private fun mediaPermissions(): Array<String> {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.READ_MEDIA_VIDEO)
@@ -53,11 +60,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun handleIntent(intent: Intent?) {
+        if (intent?.action == ACTION_OPEN_NOW_PLAYING) {
+            openNowPlayingRequests.intValue += 1
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         playerController = PlayerController(applicationContext)
         playerController.connect()
+        handleIntent(intent)
 
         setContent {
             TuneoTheme {
@@ -69,16 +83,27 @@ class MainActivity : ComponentActivity() {
                             perms.all {
                                 checkSelfPermission(it) == android.content.pm.PackageManager.PERMISSION_GRANTED
                             }
-                        }
+                        },
+                        openNowPlayingRequests = openNowPlayingRequests.intValue
                     )
                 }
             }
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
     override fun onDestroy() {
         playerController.release()
         super.onDestroy()
+    }
+
+    companion object {
+        const val ACTION_OPEN_NOW_PLAYING = "com.tuneo.app.action.OPEN_NOW_PLAYING"
     }
 }
 
@@ -93,7 +118,8 @@ private enum class Screen { MAIN, NOW_PLAYING, LOGIN, SIGN_UP, SHARE_CAPTION }
 fun TuneoApp(
     playerController: PlayerController,
     permissions: Array<String>,
-    hasPermission: (Array<String>) -> Boolean
+    hasPermission: (Array<String>) -> Boolean,
+    openNowPlayingRequests: Int = 0
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
@@ -105,6 +131,14 @@ fun TuneoApp(
     var videos by remember { mutableStateOf<List<VideoItem>>(emptyList()) }
     var selectedTab by remember { mutableStateOf(TuneoTab.SONGS) }
     var screen by remember { mutableStateOf(Screen.MAIN) }
+
+    // Tap sur la notification musicale ou le lecteur externe (Bluetooth, Android Auto...)
+    // -> ouvre directement Now Playing sur la chanson en cours, sans passer par l'accueil.
+    LaunchedEffect(openNowPlayingRequests) {
+        if (openNowPlayingRequests > 0) {
+            screen = Screen.NOW_PLAYING
+        }
+    }
     var selectedDestination by remember { mutableStateOf(TuneoDestination.BIBLIOTHEQUE) }
 
     // Session utilisateur (compte Tuneo, distinct des permissions Android)
@@ -227,10 +261,42 @@ fun TuneoApp(
                                             videos = videos,
                                             onVideoClick = { /* lecteur vidéo à venir */ }
                                         )
-                                        TuneoTab.PLAYLISTS -> PlaceholderScreen("Playlists")
-                                        TuneoTab.FOLDERS -> PlaceholderScreen("Dossiers")
-                                        TuneoTab.ARTISTS -> PlaceholderScreen("Artists")
-                                        TuneoTab.ALBUMS -> PlaceholderScreen("Albums")
+                                        TuneoTab.PLAYLISTS -> PlaylistScreen(
+                                            allSongs = songs,
+                                            currentSong = playerController.currentSong,
+                                            isPlaying = playerController.isPlaying,
+                                            onSongClick = { queueSongs, index ->
+                                                playerController.playQueue(queueSongs, index)
+                                                screen = Screen.NOW_PLAYING
+                                            }
+                                        )
+                                        TuneoTab.FOLDERS -> FolderScreen(
+                                            songs = songs,
+                                            currentSong = playerController.currentSong,
+                                            isPlaying = playerController.isPlaying,
+                                            onSongClick = { queueSongs, index ->
+                                                playerController.playQueue(queueSongs, index)
+                                                screen = Screen.NOW_PLAYING
+                                            }
+                                        )
+                                        TuneoTab.ARTISTS -> ArtistScreen(
+                                            songs = songs,
+                                            currentSong = playerController.currentSong,
+                                            isPlaying = playerController.isPlaying,
+                                            onSongClick = { queueSongs, index ->
+                                                playerController.playQueue(queueSongs, index)
+                                                screen = Screen.NOW_PLAYING
+                                            }
+                                        )
+                                        TuneoTab.ALBUMS -> AlbumScreen(
+                                            songs = songs,
+                                            currentSong = playerController.currentSong,
+                                            isPlaying = playerController.isPlaying,
+                                            onSongClick = { queueSongs, index ->
+                                                playerController.playQueue(queueSongs, index)
+                                                screen = Screen.NOW_PLAYING
+                                            }
+                                        )
                                     }
                                 }
                             }

@@ -2,6 +2,7 @@ package com.tuneo.app.data
 
 import android.content.ContentUris
 import android.content.Context
+import android.os.Build
 import android.provider.MediaStore
 
 /**
@@ -14,6 +15,14 @@ class MediaScanner(private val context: Context) {
     fun scanSongs(): List<Song> {
         val songs = mutableListOf<Song>()
 
+        // RELATIVE_PATH (ex: "Music/Rock/") existe depuis API 29 ; en dessous,
+        // on retombe sur DATA (chemin absolu complet) pour extraire le dossier.
+        val folderColumn = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Audio.Media.RELATIVE_PATH
+        } else {
+            MediaStore.Audio.Media.DATA
+        }
+
         val projection = arrayOf(
             MediaStore.Audio.Media._ID,
             MediaStore.Audio.Media.TITLE,
@@ -21,7 +30,8 @@ class MediaScanner(private val context: Context) {
             MediaStore.Audio.Media.ALBUM,
             MediaStore.Audio.Media.DURATION,
             MediaStore.Audio.Media.ALBUM_ID,
-            MediaStore.Audio.Media.DISPLAY_NAME
+            MediaStore.Audio.Media.DISPLAY_NAME,
+            folderColumn
         )
 
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
@@ -41,6 +51,7 @@ class MediaScanner(private val context: Context) {
             val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
             val albumIdCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
             val displayNameCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
+            val folderCol = cursor.getColumnIndexOrThrow(folderColumn)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idCol)
@@ -63,6 +74,15 @@ class MediaScanner(private val context: Context) {
                     else -> "Titre inconnu"
                 }
 
+                // Sur API < 29, folderColumn = DATA = chemin absolu du fichier ;
+                // on retire le nom de fichier pour ne garder que le dossier.
+                val rawFolder = cursor.getString(folderCol)
+                val folderPath = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    rawFolder?.trimEnd('/') ?: ""
+                } else {
+                    rawFolder?.substringBeforeLast('/', "") ?: ""
+                }
+
                 songs.add(
                     Song(
                         id = id,
@@ -71,7 +91,8 @@ class MediaScanner(private val context: Context) {
                         album = cursor.getString(albumCol) ?: "",
                         duration = cursor.getLong(durationCol),
                         uri = contentUri,
-                        albumArtUri = artUri
+                        albumArtUri = artUri,
+                        folderPath = folderPath.ifBlank { "Autres" }
                     )
                 )
             }

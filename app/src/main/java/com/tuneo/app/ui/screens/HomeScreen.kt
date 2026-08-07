@@ -22,8 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.tuneo.app.data.Song
+import com.tuneo.app.ui.components.AlbumArtThumbnail
+import com.tuneo.app.ui.components.EqualizerBars
 import com.tuneo.app.ui.theme.TuneoAccentBlue
 import com.tuneo.app.ui.theme.TuneoBackgroundDark
 import com.tuneo.app.ui.theme.TuneoBackgroundLight
@@ -111,30 +112,30 @@ private fun SongRow(song: Song, isCurrent: Boolean, isPlaying: Boolean, onClick:
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier
-                .size(56.dp)
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(14.dp))
+            modifier = Modifier.size(56.dp)
         ) {
-            AsyncImage(
-                model = song.albumArtUri,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize()
+            // Même composant de miniature que Play Now : card à coins arrondis,
+            // avec fallback transparent + icône musique si pas de pochette.
+            AlbumArtThumbnail(
+                albumArtUri = song.albumArtUri,
+                thumbnailSize = 56.dp,
+                cornerRadius = 14.dp
             )
             if (isCurrent) {
                 // Voile sombre + égaliseur par-dessus la pochette, comme sur Lark Player,
                 // pour indiquer sans ambiguïté quelle chanson joue actuellement.
+                // L'égaliseur s'anime en temps réel pendant la lecture et se fige en pause.
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .clip(RoundedCornerShape(14.dp))
                         .background(Color.Black.copy(alpha = 0.45f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Equalizer,
-                        contentDescription = if (isPlaying) "En cours de lecture" else "En pause",
-                        tint = Color.White,
-                        modifier = Modifier.size(22.dp)
+                    EqualizerBars(
+                        isPlaying = isPlaying,
+                        color = Color.White,
+                        maxHeight = 18.dp
                     )
                 }
             }

@@ -36,6 +36,7 @@ import com.tuneo.app.data.Profile
 import com.tuneo.app.data.ProfileRepository
 import com.tuneo.app.data.ProfileStats
 import com.tuneo.app.data.Song
+import com.tuneo.app.data.Story
 import com.tuneo.app.ui.components.EqualizerBars
 import com.tuneo.app.ui.theme.FeedAccentPurple
 import com.tuneo.app.ui.theme.FeedBackgroundDark
@@ -63,6 +64,8 @@ fun ProfileScreen(
     isCurrentlyPlaying: Boolean,
     onBack: () -> Unit,
     onEditProfile: () -> Unit,
+    onEditFavoriteArtists: () -> Unit = {},
+    onSignOut: () -> Unit = {},
     onMessageClick: (Profile) -> Unit = {}
 ) {
     val isDark = isSystemInDarkTheme()
@@ -78,15 +81,19 @@ fun ProfileScreen(
     var stats by remember { mutableStateOf(ProfileStats()) }
     var favoriteArtists by remember { mutableStateOf<List<FavoriteArtist>>(emptyList()) }
     var posts by remember { mutableStateOf<List<FeedPost>>(emptyList()) }
+    var activeStory by remember { mutableStateOf<Story?>(null) }
     var isFollowing by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var selectedTab by remember { mutableStateOf(ProfileTab.POSTS) }
+    var showMenu by remember { mutableStateOf(false) }
+    var showSignOutConfirm by remember { mutableStateOf(false) }
 
     suspend fun reload() {
         profile = profileRepository.fetchProfile(userId)
         stats = profileRepository.fetchStats(userId)
         favoriteArtists = profileRepository.fetchFavoriteArtists(userId)
         posts = profileRepository.fetchUserPosts(userId)
+        activeStory = profileRepository.fetchActiveStory(userId)
         if (!isOwnProfile && viewerUserId != null) {
             isFollowing = feedRepository.followingIds(viewerUserId).contains(userId)
         }
@@ -96,6 +103,15 @@ fun ProfileScreen(
     LaunchedEffect(userId) {
         isLoading = true
         reload()
+    }
+
+    // Sur son propre profil, la story Supabase se met déjà à jour automatiquement à chaque
+    // changement de piste (upsertStory dans MainActivity) : on rafraîchit ici pour refléter
+    // ça sans attendre une navigation complète de l'écran.
+    LaunchedEffect(currentlyPlayingSong, isOwnProfile) {
+        if (isOwnProfile) {
+            activeStory = profileRepository.fetchActiveStory(userId)
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize().background(background)) {
@@ -111,10 +127,48 @@ fun ProfileScreen(
                 tint = primaryColor,
                 modifier = Modifier.clickable { onBack() }
             )
-            Icon(
-                Icons.Default.MoreHoriz,
-                contentDescription = "Plus d'options",
-                tint = primaryColor
+            Box {
+                Icon(
+                    Icons.Default.MoreHoriz,
+                    contentDescription = "Plus d'options",
+                    tint = primaryColor,
+                    modifier = Modifier.clickable { showMenu = true }
+                )
+                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                    if (isOwnProfile) {
+                        DropdownMenuItem(
+                            text = { Text("Modifier les artistes préférés") },
+                            onClick = {
+                                showMenu = false
+                                onEditFavoriteArtists()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Déconnexion", color = Color(0xFFE0455F)) },
+                            onClick = {
+                                showMenu = false
+                                showSignOutConfirm = true
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        if (showSignOutConfirm) {
+            AlertDialog(
+                onDismissRequest = { showSignOutConfirm = false },
+                title = { Text("Se déconnecter ?") },
+                text = { Text("Tu pourras te reconnecter ou créer un autre compte à tout moment.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showSignOutConfirm = false
+                        onSignOut()
+                    }) { Text("Déconnexion", color = Color(0xFFE0455F)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSignOutConfirm = false }) { Text("Annuler") }
+                }
             )
         }
 
@@ -176,10 +230,10 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(20.dp))
                 }
 
-                if (isOwnProfile && currentlyPlayingSong != null) {
+                if (activeStory != null) {
                     NowPlayingCard(
-                        song = currentlyPlayingSong,
-                        isPlaying = isCurrentlyPlaying,
+                        story = activeStory,
+                        isPlaying = if (isOwnProfile) isCurrentlyPlaying else true,
                         secondaryColor = secondaryColor,
                         primaryColor = primaryColor
                     )
@@ -390,7 +444,8 @@ private fun FavoriteArtistsRow(artists: List<FavoriteArtist>) {
 }
 
 @Composable
-private fun NowPlayingCard(song: Song, isPlaying: Boolean, secondaryColor: Color, primaryColor: Color) {
+private fun NowPlayingCard(story: Story?, isPlaying: Boolean, secondaryColor: Color, primaryColor: Color) {
+    if (story == null) return
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -407,7 +462,7 @@ private fun NowPlayingCard(song: Song, isPlaying: Boolean, secondaryColor: Color
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color(0xFF150A30))
         ) {
-            song.albumArtUri?.let {
+            story.album_art_url?.let {
                 AsyncImage(
                     model = it,
                     contentDescription = null,
@@ -423,8 +478,8 @@ private fun NowPlayingCard(song: Song, isPlaying: Boolean, secondaryColor: Color
                 Spacer(modifier = Modifier.width(6.dp))
                 Text("Écoute maintenant", color = Color(0xFFA78BFA), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
-            Text(song.title, color = primaryColor, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(song.artist, color = secondaryColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(story.song_title, color = primaryColor, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(story.song_artist, color = secondaryColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Box(
             modifier = Modifier

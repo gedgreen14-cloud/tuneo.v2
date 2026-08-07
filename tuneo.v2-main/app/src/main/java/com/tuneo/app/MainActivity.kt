@@ -114,7 +114,7 @@ class MainActivity : ComponentActivity() {
  * déclenché soit par le bouton "Partager" du lecteur (si pas connecté),
  * soit directement par le "+" de story.
  */
-private enum class Screen { MAIN, NOW_PLAYING, LOGIN, SIGN_UP, SHARE_CAPTION, EDIT_PROFILE }
+private enum class Screen { MAIN, NOW_PLAYING, LOGIN, SIGN_UP, SHARE_CAPTION, EDIT_PROFILE, EDIT_FAVORITE_ARTISTS }
 
 @Composable
 fun TuneoApp(
@@ -224,7 +224,7 @@ fun TuneoApp(
             backgroundColor = nowPlayingBackground ?: libraryBackground,
             useDarkIcons = nowPlayingBackground?.let { contentColorFor(it) == androidx.compose.ui.graphics.Color(0xFF1A1A1A) } ?: !isDark
         )
-        Screen.LOGIN, Screen.SIGN_UP, Screen.SHARE_CAPTION, Screen.EDIT_PROFILE ->
+        Screen.LOGIN, Screen.SIGN_UP, Screen.SHARE_CAPTION, Screen.EDIT_PROFILE, Screen.EDIT_FAVORITE_ARTISTS ->
             TuneoStatusBar(backgroundColor = libraryBackground, useDarkIcons = !isDark)
     }
 
@@ -327,7 +327,16 @@ fun TuneoApp(
                                         currentlyPlayingSong = playerController.currentSong,
                                         isCurrentlyPlaying = playerController.isPlaying,
                                         onBack = { selectedDestination = TuneoDestination.ACCUEIL },
-                                        onEditProfile = { screen = Screen.EDIT_PROFILE }
+                                        onEditProfile = { screen = Screen.EDIT_PROFILE },
+                                        onEditFavoriteArtists = { screen = Screen.EDIT_FAVORITE_ARTISTS },
+                                        onSignOut = {
+                                            scope.launch {
+                                                authRepository.signOut()
+                                                isAuthenticated = false
+                                                myProfile = null
+                                                selectedDestination = TuneoDestination.BIBLIOTHEQUE
+                                            }
+                                        }
                                     )
                                 }
                             }
@@ -420,6 +429,19 @@ fun TuneoApp(
                             myProfile = updatedProfile
                             screen = Screen.MAIN
                         }
+                    )
+                } else {
+                    screen = Screen.MAIN
+                }
+            }
+
+            Screen.EDIT_FAVORITE_ARTISTS -> {
+                val profile = myProfile
+                if (profile != null) {
+                    FavoriteArtistsEditScreen(
+                        userId = profile.id,
+                        onCancel = { screen = Screen.MAIN },
+                        onSaved = { screen = Screen.MAIN }
                     )
                 } else {
                     screen = Screen.MAIN

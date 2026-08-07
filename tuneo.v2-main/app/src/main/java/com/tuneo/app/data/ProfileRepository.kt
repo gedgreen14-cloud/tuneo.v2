@@ -45,6 +45,17 @@ class ProfileRepository {
             .decodeList<FavoriteArtist>()
     }
 
+    /**
+     * Story active de l'utilisateur ("ce qu'il écoute en ce moment"), utilisée pour
+     * afficher la carte "Écoute maintenant" sur N'IMPORTE QUEL profil (pas seulement
+     * le sien) : la même table que le bandeau de stories du feed, source unique de vérité.
+     */
+    suspend fun fetchActiveStory(userId: String): Story? {
+        return client.postgrest.from("stories")
+            .select { filter { eq("user_id", userId); eq("is_active", true) } }
+            .decodeSingleOrNull<Story>()
+    }
+
     suspend fun setFavoriteArtists(userId: String, artists: List<FavoriteArtist>) {
         client.postgrest.from("favorite_artists").delete { filter { eq("user_id", userId) } }
         if (artists.isNotEmpty()) {
@@ -78,6 +89,17 @@ class ProfileRepository {
 
     suspend fun uploadAvatar(userId: String, bytes: ByteArray): String {
         val path = "$userId/avatar.jpg"
+        client.storage.from("avatars").upload(path, bytes) { upsert = true }
+        return client.storage.from("avatars").publicUrl(path)
+    }
+
+    /**
+     * Photo d'un artiste préféré, stockée dans le même bucket "avatars" sous un chemin
+     * dédié par utilisateur pour éviter toute collision entre deux personnes ayant
+     * choisi le même artiste.
+     */
+    suspend fun uploadFavoriteArtistPhoto(userId: String, localArtistId: String, bytes: ByteArray): String {
+        val path = "$userId/favorite-artists/$localArtistId.jpg"
         client.storage.from("avatars").upload(path, bytes) { upsert = true }
         return client.storage.from("avatars").publicUrl(path)
     }

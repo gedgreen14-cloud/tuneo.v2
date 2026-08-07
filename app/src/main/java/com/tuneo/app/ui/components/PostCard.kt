@@ -5,10 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Favorite
@@ -66,50 +65,42 @@ fun PostCard(
     val primaryColor = if (isDark) FeedTextPrimaryDark else FeedTextPrimaryLight
     val secondaryColor = if (isDark) FeedTextSecondaryDark else FeedTextSecondaryLight
 
-    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+    Column(modifier = modifier.fillMaxWidth()) {
 
-        // Ligne d'en-tête : avatar + pastille en ligne, @pseudo, "Abonné (e)", •••
+        // Ligne d'en-tête : avatar petit aligné avec le texte, @pseudo, "Abonné(e)", •••
+        // Padding horizontal appliqué ici uniquement (pas sur l'image, qui doit toucher les bords).
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(modifier = Modifier.size(44.dp)) {
-                AsyncImage(
-                    model = post.user_avatar_url,
-                    contentDescription = post.username,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(CircleShape)
-                )
-                Box(
-                    modifier = Modifier
-                        .size(11.dp)
-                        .align(Alignment.BottomEnd)
-                        .clip(CircleShape)
-                        .background(FeedAccentPurple)
-                )
-            }
-            Spacer(modifier = Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "@${post.username}",
-                    color = primaryColor,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(minutesAgoLabel, color = secondaryColor, fontSize = 12.sp)
-            }
+            AsyncImage(
+                model = post.user_avatar_url,
+                contentDescription = post.username,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(28.dp).clip(CircleShape)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                "@${post.username}",
+                color = primaryColor,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            // Affiché seulement sur les posts des autres : "Abonné(e)" si on suit déjà,
+            // "S'abonner" sinon. Jamais affiché sur son propre post.
             if (!isOwnPost) {
                 Text(
-                    if (isFollowing) "Abonné (e)" else "S'abonner",
-                    color = FeedAccentPurple,
+                    if (isFollowing) "Abonné(e)" else "S'abonner",
+                    color = if (isFollowing) secondaryColor else FeedAccentPurple,
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = if (isFollowing) FontWeight.Normal else FontWeight.Medium,
                     modifier = Modifier.clickable { onFollowToggle() }
                 )
             }
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.weight(1f))
             Icon(
                 Icons.Default.MoreHoriz,
                 contentDescription = "Plus d'options",
@@ -118,15 +109,14 @@ fun PostCard(
             )
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        // Pochette en plein format (ratio carré), titre/artiste/statut en overlay
-        // sur un dégradé sombre en bas de l'image pour rester lisibles.
+        // Pochette en plein format (ratio portrait 4:5, pleine largeur, SANS coins arrondis —
+        // conforme à la référence), titre/artiste/statut en overlay sur un dégradé sombre.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(14.dp))
+                .aspectRatio(4f / 5f)
         ) {
             AsyncImage(
                 model = post.album_art_url,
@@ -158,25 +148,25 @@ fun PostCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        "ÉCOUTE MAINTENANT",
+                        "ÉCOUTE ACTUELLE",
                         color = FeedAccentPurple,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
                     )
                 }
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     post.song_title,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 26.sp,
+                    fontSize = 24.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     post.song_artist,
-                    color = Color.White.copy(alpha = 0.85f),
+                    color = Color.White.copy(alpha = 0.9f),
                     fontSize = 15.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -196,15 +186,23 @@ fun PostCard(
         }
 
         post.caption?.let { caption ->
-            Spacer(modifier = Modifier.height(14.dp))
-            Text(caption, color = primaryColor, fontSize = 15.sp)
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.padding(horizontal = 16.dp)) {
+                Text(
+                    "@${post.username} ",
+                    color = primaryColor,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
+                Text(caption, color = primaryColor, fontSize = 13.sp)
+            }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Actions nues, sans fond en pilule : cœur, commentaire, repost à gauche ; enregistrer à droite.
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -217,7 +215,7 @@ fun PostCard(
                     onClick = onLikeToggle
                 )
                 ActionStat(
-                    icon = Icons.AutoMirrored.Outlined.Chat,
+                    icon = Icons.Outlined.ChatBubbleOutline,
                     tint = secondaryColor,
                     label = formatCount(post.comment_count),
                     textColor = secondaryColor,
@@ -231,7 +229,7 @@ fun PostCard(
                     onClick = onRepostClick
                 )
                 Icon(
-                    Icons.AutoMirrored.Filled.Send,
+                    Icons.AutoMirrored.Outlined.Send,
                     contentDescription = "Partager",
                     tint = secondaryColor,
                     modifier = Modifier.size(22.dp).clickable { /* partage à venir */ }
@@ -249,7 +247,7 @@ fun PostCard(
         if (post.like_count > 0) {
             Spacer(modifier = Modifier.height(10.dp))
             Row(
-                modifier = Modifier.fillMaxWidth().clickable { onLikedByClick() },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clickable { onLikedByClick() },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (post.like_count > 1) {

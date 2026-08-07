@@ -86,11 +86,11 @@ private fun AddStoryItem(onClick: () -> Unit) {
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(72.dp)
+        modifier = Modifier.width(46.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(64.dp)
+                .size(42.dp)
                 .clip(CircleShape)
                 .border(width = 2.dp, color = FeedAccentPurple, shape = CircleShape)
                 .clickable { onClick() },
@@ -117,11 +117,11 @@ private fun MyListeningStoryItem(avatarUrl: String?, onClick: () -> Unit) {
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(72.dp).clickable { onClick() }
+        modifier = Modifier.width(46.dp).clickable { onClick() }
     ) {
         Box(
             modifier = Modifier
-                .size(64.dp)
+                .size(42.dp)
                 .border(width = 2.dp, brush = Brush.linearGradient(myListeningRing), shape = CircleShape)
                 .padding(3.dp)
                 .clip(CircleShape),
@@ -144,7 +144,7 @@ private fun MyListeningStoryItem(avatarUrl: String?, onClick: () -> Unit) {
                     imageVector = Icons.Default.Equalizer,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }
@@ -172,11 +172,11 @@ private fun StoryItem(
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(72.dp).clickable { onClick() }
+        modifier = Modifier.width(46.dp).clickable { onClick() }
     ) {
         Box(
             modifier = Modifier
-                .size(64.dp)
+                .size(42.dp)
                 .border(width = 2.dp, brush = Brush.linearGradient(ringColors), shape = CircleShape)
                 .padding(3.dp)
                 .clip(CircleShape)

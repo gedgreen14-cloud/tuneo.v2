@@ -14,7 +14,13 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
 import com.tuneo.app.data.PlaylistRepository
+import com.tuneo.app.data.ProfileRepository
 import com.tuneo.app.data.Song
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /**
  * Pont entre l'UI Compose et le MediaController connecté au PlaybackService.
@@ -25,6 +31,13 @@ class PlayerController(private val context: Context) {
 
     private var controller: MediaController? = null
     private val playlistRepository = PlaylistRepository(context)
+    private val profileRepository = ProfileRepository()
+    private val controllerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // Renseigné par TuneoApp dès qu'une session Tuneo est active, pour incrémenter
+    // le compteur "Écoutes" du profil à chaque changement de piste. Null si déconnecté :
+    // aucun appel réseau n'est alors effectué.
+    var authenticatedUserId: String? = null
 
     var currentSong by mutableStateOf<Song?>(null)
         private set
@@ -78,6 +91,10 @@ class PlayerController(private val context: Context) {
                     // Alimente l'historique local pour les playlists automatiques
                     // "Lues récemment" et "Les plus jouées".
                     currentSong?.let { playlistRepository.recordPlayback(it.id) }
+                    // Compteur "Écoutes" cumulé du profil, uniquement si connecté.
+                    authenticatedUserId?.let { userId ->
+                        controllerScope.launch { profileRepository.incrementTotalPlays(userId) }
+                    }
                 }
             })
             isShuffleEnabled = controller?.shuffleModeEnabled ?: false
@@ -168,5 +185,6 @@ class PlayerController(private val context: Context) {
         positionHandler.removeCallbacks(positionUpdater)
         controller?.release()
         controller = null
+        controllerScope.cancel()
     }
 }

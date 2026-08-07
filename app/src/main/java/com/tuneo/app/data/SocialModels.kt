@@ -7,7 +7,30 @@ data class Profile(
     val id: String,
     val username: String,
     val avatar_url: String? = null,
+    val bio: String? = null,
+    val link_url: String? = null,
+    val total_plays: Long = 0,
     val created_at: String? = null
+)
+
+/** Un artiste mis en avant sur le profil d'un utilisateur (ligne "Artistes préférés"). */
+@Serializable
+data class FavoriteArtist(
+    val id: String? = null,
+    val user_id: String,
+    val artist_name: String,
+    val avatar_url: String? = null,
+    val position: Int = 0
+)
+
+/**
+ * Compteurs agrégés du profil (Publications / Abonnés / Abonnements),
+ * calculés en live via COUNT côté Supabase — pas de colonnes stockées.
+ */
+data class ProfileStats(
+    val postCount: Long = 0,
+    val followerCount: Long = 0,
+    val followingCount: Long = 0
 )
 
 @Serializable

@@ -32,6 +32,8 @@ import com.tuneo.app.ui.components.TabsRow
 import com.tuneo.app.ui.components.TuneoDestination
 import com.tuneo.app.ui.components.TuneoTab
 import com.tuneo.app.ui.screens.*
+import com.tuneo.app.ui.screens.ProfileScreen
+import com.tuneo.app.ui.screens.EditProfileScreen
 import com.tuneo.app.ui.theme.FeedBackground
 import com.tuneo.app.ui.theme.contentColorFor
 import com.tuneo.app.ui.theme.rememberDominantColor
@@ -112,7 +114,7 @@ class MainActivity : ComponentActivity() {
  * déclenché soit par le bouton "Partager" du lecteur (si pas connecté),
  * soit directement par le "+" de story.
  */
-private enum class Screen { MAIN, NOW_PLAYING, LOGIN, SIGN_UP, SHARE_CAPTION }
+private enum class Screen { MAIN, NOW_PLAYING, LOGIN, SIGN_UP, SHARE_CAPTION, EDIT_PROFILE, EDIT_FAVORITE_ARTISTS }
 
 @Composable
 fun TuneoApp(
@@ -174,6 +176,12 @@ fun TuneoApp(
         }
     }
 
+    // Alimente PlayerController avec l'utilisateur connecté, pour qu'il puisse
+    // incrémenter le compteur "Écoutes" du profil à chaque changement de piste.
+    LaunchedEffect(myProfile?.id) {
+        playerController.authenticatedUserId = myProfile?.id
+    }
+
     // Chaque fois que la chanson en cours de lecture locale change, on met à jour
     // automatiquement la story "ce que j'écoute" si l'utilisateur est connecté.
     LaunchedEffect(playerController.currentSong, isAuthenticated) {
@@ -216,7 +224,7 @@ fun TuneoApp(
             backgroundColor = nowPlayingBackground ?: libraryBackground,
             useDarkIcons = nowPlayingBackground?.let { contentColorFor(it) == androidx.compose.ui.graphics.Color(0xFF1A1A1A) } ?: !isDark
         )
-        Screen.LOGIN, Screen.SIGN_UP, Screen.SHARE_CAPTION ->
+        Screen.LOGIN, Screen.SIGN_UP, Screen.SHARE_CAPTION, Screen.EDIT_PROFILE, Screen.EDIT_FAVORITE_ARTISTS ->
             TuneoStatusBar(backgroundColor = libraryBackground, useDarkIcons = !isDark)
     }
 
@@ -305,7 +313,33 @@ fun TuneoApp(
 
                             TuneoDestination.NOTIFICATIONS -> PlaceholderScreen("Notifications")
 
-                            TuneoDestination.PROFIL -> PlaceholderScreen("Profil")
+                            TuneoDestination.PROFIL -> {
+                                val profile = myProfile
+                                if (!isAuthenticated || profile == null) {
+                                    // Pas de compte Tuneo : on redirige vers l'inscription,
+                                    // impossible d'avoir un profil sans compte.
+                                    LaunchedEffect(Unit) { screen = Screen.SIGN_UP }
+                                } else {
+                                    ProfileScreen(
+                                        userId = profile.id,
+                                        isOwnProfile = true,
+                                        viewerUserId = profile.id,
+                                        currentlyPlayingSong = playerController.currentSong,
+                                        isCurrentlyPlaying = playerController.isPlaying,
+                                        onBack = { selectedDestination = TuneoDestination.ACCUEIL },
+                                        onEditProfile = { screen = Screen.EDIT_PROFILE },
+                                        onEditFavoriteArtists = { screen = Screen.EDIT_FAVORITE_ARTISTS },
+                                        onSignOut = {
+                                            scope.launch {
+                                                authRepository.signOut()
+                                                isAuthenticated = false
+                                                myProfile = null
+                                                selectedDestination = TuneoDestination.BIBLIOTHEQUE
+                                            }
+                                        }
+                                    )
+                                }
+                            }
                         }
 
                         // Mini-player persistant, flotte au-dessus du contenu, juste au-dessus de la nav bar
@@ -383,6 +417,35 @@ fun TuneoApp(
                     },
                     onGoToSignUp = { screen = Screen.SIGN_UP }
                 )
+            }
+
+            Screen.EDIT_PROFILE -> {
+                val profile = myProfile
+                if (profile != null) {
+                    EditProfileScreen(
+                        profile = profile,
+                        onCancel = { screen = Screen.MAIN },
+                        onSaved = { updatedProfile ->
+                            myProfile = updatedProfile
+                            screen = Screen.MAIN
+                        }
+                    )
+                } else {
+                    screen = Screen.MAIN
+                }
+            }
+
+            Screen.EDIT_FAVORITE_ARTISTS -> {
+                val profile = myProfile
+                if (profile != null) {
+                    FavoriteArtistsEditScreen(
+                        userId = profile.id,
+                        onCancel = { screen = Screen.MAIN },
+                        onSaved = { screen = Screen.MAIN }
+                    )
+                } else {
+                    screen = Screen.MAIN
+                }
             }
 
             Screen.SHARE_CAPTION -> {

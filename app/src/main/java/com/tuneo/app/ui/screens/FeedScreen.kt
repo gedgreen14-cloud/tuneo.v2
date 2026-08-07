@@ -8,7 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -191,50 +191,35 @@ private fun FeedHeader(myAvatarUrl: String?, onMessagesClick: () -> Unit) {
     val isDark = isSystemInDarkTheme()
     val primaryColor = if (isDark) FeedTextPrimaryDark else FeedTextPrimaryLight
 
-    Box(
+    // Logo aligné à gauche (pas centré), casse normale (pas tout majuscule),
+    // "o" final en violet accent ; à droite, une simple icône de chat.
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.size(32.dp).align(Alignment.CenterStart)) {
-            AsyncImage(
-                model = myAvatarUrl,
-                contentDescription = "Profil",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().clip(CircleShape).background(Color.Gray)
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                "Tune",
+                color = primaryColor,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
             )
-            Box(
-                modifier = Modifier
-                    .size(9.dp)
-                    .align(Alignment.BottomEnd)
-                    .clip(CircleShape)
-                    .background(FeedAccentPurple)
+            Text(
+                "o",
+                color = FeedAccentPurple,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
             )
         }
 
-        Text(
-            "TUNEO",
-            color = primaryColor,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 3.sp,
-            modifier = Modifier.align(Alignment.Center)
-        )
-
-        Box(modifier = Modifier.align(Alignment.CenterEnd)) {
-            IconButton(onClick = onMessagesClick) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Messages",
-                    tint = primaryColor
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .align(Alignment.TopEnd)
-                    .clip(CircleShape)
-                    .background(FeedAccentPurple)
+        IconButton(onClick = onMessagesClick) {
+            Icon(
+                Icons.AutoMirrored.Outlined.Chat,
+                contentDescription = "Messages",
+                tint = primaryColor
             )
         }
     }

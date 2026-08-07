@@ -86,11 +86,11 @@ private fun AddStoryItem(onClick: () -> Unit) {
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(46.dp)
+        modifier = Modifier.width(58.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(42.dp)
+                .size(56.dp)
                 .clip(CircleShape)
                 .border(width = 2.dp, color = FeedAccentPurple, shape = CircleShape)
                 .clickable { onClick() },
@@ -117,11 +117,11 @@ private fun MyListeningStoryItem(avatarUrl: String?, onClick: () -> Unit) {
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(46.dp).clickable { onClick() }
+        modifier = Modifier.width(58.dp).clickable { onClick() }
     ) {
         Box(
             modifier = Modifier
-                .size(42.dp)
+                .size(56.dp)
                 .border(width = 2.dp, brush = Brush.linearGradient(myListeningRing), shape = CircleShape)
                 .padding(3.dp)
                 .clip(CircleShape),
@@ -172,11 +172,11 @@ private fun StoryItem(
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(46.dp).clickable { onClick() }
+        modifier = Modifier.width(58.dp).clickable { onClick() }
     ) {
         Box(
             modifier = Modifier
-                .size(42.dp)
+                .size(56.dp)
                 .border(width = 2.dp, brush = Brush.linearGradient(ringColors), shape = CircleShape)
                 .padding(3.dp)
                 .clip(CircleShape)

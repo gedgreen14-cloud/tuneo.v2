@@ -7,13 +7,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -21,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -118,55 +120,79 @@ fun PostCard(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        Text(
-            "ÉCOUTE MAINTENANT",
-            color = FeedAccentPurple,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // Bloc chanson : titre / artiste / source à gauche, pochette à droite.
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    post.song_title,
-                    color = primaryColor,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 30.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    post.song_artist,
-                    color = secondaryColor,
-                    fontSize = 16.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Headset,
-                        contentDescription = null,
-                        tint = secondaryColor,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(post.source_label, color = secondaryColor, fontSize = 12.sp)
-                }
-            }
-            Spacer(modifier = Modifier.width(14.dp))
+        // Pochette en plein format (ratio carré), titre/artiste/statut en overlay
+        // sur un dégradé sombre en bas de l'image pour rester lisibles.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(14.dp))
+        ) {
             AsyncImage(
                 model = post.album_art_url,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(110.dp)
-                    .clip(RoundedCornerShape(14.dp))
+                modifier = Modifier.fillMaxSize()
             )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f)),
+                            startY = 0.4f
+                        )
+                    )
+            )
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(14.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    EqualizerBars(
+                        isPlaying = true,
+                        color = FeedAccentPurple,
+                        barWidth = 3.dp,
+                        maxHeight = 12.dp
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "ÉCOUTE MAINTENANT",
+                        color = FeedAccentPurple,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    post.song_title,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 26.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    post.song_artist,
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 15.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Headset,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(post.source_label, color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
+                }
+            }
         }
 
         post.caption?.let { caption ->
@@ -191,7 +217,7 @@ fun PostCard(
                     onClick = onLikeToggle
                 )
                 ActionStat(
-                    icon = Icons.Outlined.ChatBubbleOutline,
+                    icon = Icons.AutoMirrored.Outlined.Chat,
                     tint = secondaryColor,
                     label = formatCount(post.comment_count),
                     textColor = secondaryColor,
@@ -203,6 +229,12 @@ fun PostCard(
                     label = formatCount(post.share_count),
                     textColor = secondaryColor,
                     onClick = onRepostClick
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Partager",
+                    tint = secondaryColor,
+                    modifier = Modifier.size(22.dp).clickable { /* partage à venir */ }
                 )
             }
             Icon(

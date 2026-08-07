@@ -14,7 +14,10 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.tuneo.app.data.PlaylistRepository
 import com.tuneo.app.data.Song
 import com.tuneo.app.ui.theme.contentColorFor
 import com.tuneo.app.ui.theme.rememberDominantColor
@@ -43,6 +47,12 @@ fun NowPlayingScreen(
     val backgroundColor = rememberDominantColor(song.albumArtUri)
     val accentColor = contentColorFor(backgroundColor)
     val secondaryColor = accentColor.copy(alpha = 0.7f)
+
+    // Bouton "Aimer" : alimente la playlist automatique "Chansons aimées".
+    // Recalculé à chaque changement de morceau puisque l'état aimé est par morceau.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val repository = remember { PlaylistRepository(context) }
+    var isLiked by remember(song.id) { mutableStateOf(repository.getLikedSongIds().contains(song.id)) }
 
     Column(
         modifier = Modifier
@@ -114,11 +124,14 @@ fun NowPlayingScreen(
                 fontSize = 16.sp
             )
             Row {
-                IconButton(onClick = { /* favori - à venir */ }) {
+                IconButton(onClick = {
+                    repository.toggleLiked(song.id)
+                    isLiked = !isLiked
+                }) {
                     Icon(
-                        imageVector = Icons.Outlined.FavoriteBorder,
-                        contentDescription = "Aimer",
-                        tint = secondaryColor
+                        imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = if (isLiked) "Retirer des chansons aimées" else "Aimer",
+                        tint = if (isLiked) accentColor else secondaryColor
                     )
                 }
                 IconButton(onClick = { /* menu - à venir */ }) {

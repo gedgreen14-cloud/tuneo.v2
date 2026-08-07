@@ -2,19 +2,18 @@ package com.tuneo.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -29,226 +28,264 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.tuneo.app.data.FeedPost
+import com.tuneo.app.data.Profile
 import com.tuneo.app.ui.theme.FeedAccentPurple
-import com.tuneo.app.ui.theme.FeedCardBackground
 import com.tuneo.app.ui.theme.FeedLikeRed
-import com.tuneo.app.ui.theme.FeedOnlineGreen
-import com.tuneo.app.ui.theme.FeedPillBackground
-import com.tuneo.app.ui.theme.FeedTextPrimary
-import com.tuneo.app.ui.theme.FeedTextSecondary
+import com.tuneo.app.ui.theme.FeedTextPrimaryDark
+import com.tuneo.app.ui.theme.FeedTextPrimaryLight
+import com.tuneo.app.ui.theme.FeedTextSecondaryDark
+import com.tuneo.app.ui.theme.FeedTextSecondaryLight
 
-/** Couleur des ondes, variée par post (mêmes teintes que la maquette : violet / orange / rose). */
-private val waveformColors = listOf(
-    Color(0xFFB794F6), // violet clair
-    Color(0xFFF6AD55), // orange
-    Color(0xFFED64A6)  // rose
-)
-
+/**
+ * Card de post du feed, reproduite à l'identique de la maquette :
+ * aucun fond de carte, aucun fond en pilule sur les actions — tout est posé
+ * nu sur le fond de l'écran (noir en sombre, blanc en clair).
+ */
 @Composable
 fun PostCard(
     post: FeedPost,
     isLiked: Boolean,
-    myAvatarUrl: String?,
+    isSaved: Boolean,
+    minutesAgoLabel: String,
+    isOwnPost: Boolean,
+    isFollowing: Boolean,
+    likedByProfiles: List<Profile>,
     onLikeToggle: () -> Unit,
     onCommentClick: () -> Unit,
-    minutesAgoLabel: String,
+    onRepostClick: () -> Unit,
+    onSaveToggle: () -> Unit,
+    onMoreClick: () -> Unit,
+    onLikedByClick: () -> Unit,
+    onFollowToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val waveColor = waveformColors[post.id.hashCode().mod(waveformColors.size)]
+    val isDark = isSystemInDarkTheme()
+    val primaryColor = if (isDark) FeedTextPrimaryDark else FeedTextPrimaryLight
+    val secondaryColor = if (isDark) FeedTextSecondaryDark else FeedTextSecondaryLight
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(FeedCardBackground)
-            .padding(14.dp)
-    ) {
-        // En-tête : avatar, pseudo + badge, "Écoute maintenant" + temps, menu
+    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+
+        // Ligne d'en-tête : avatar + pastille en ligne, @pseudo, "Abonné (e)", •••
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
-            AsyncImage(
-                model = post.user_avatar_url,
-                contentDescription = post.username,
-                modifier = Modifier.size(38.dp).clip(CircleShape).background(FeedPillBackground)
-            )
+            Box(modifier = Modifier.size(44.dp)) {
+                AsyncImage(
+                    model = post.user_avatar_url,
+                    contentDescription = post.username,
+                    modifier = Modifier.fillMaxSize().clip(CircleShape)
+                )
+                Box(
+                    modifier = Modifier
+                        .size(11.dp)
+                        .align(Alignment.BottomEnd)
+                        .clip(CircleShape)
+                        .background(FeedAccentPurple)
+                )
+            }
             Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "@${post.username}",
-                        color = FeedTextPrimary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = FeedAccentPurple,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Écoute maintenant", color = FeedTextSecondary, fontSize = 12.sp)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Box(
-                        modifier = Modifier.size(6.dp).clip(CircleShape).background(FeedOnlineGreen)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(minutesAgoLabel, color = FeedTextSecondary, fontSize = 12.sp)
-                }
-            }
-            Icon(Icons.Default.MoreHoriz, contentDescription = "Plus d'options", tint = FeedTextSecondary)
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Bloc chanson : pochette + infos + waveform (pas de timer/barre de progression)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            AsyncImage(
-                model = post.album_art_url,
-                contentDescription = null,
-                modifier = Modifier.size(84.dp).clip(RoundedCornerShape(10.dp))
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    post.song_title,
-                    color = FeedTextPrimary,
+                    "@${post.username}",
+                    color = primaryColor,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
+                    fontSize = 15.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(post.song_artist, color = FeedTextSecondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                post.song_genre?.let { genre ->
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(FeedAccentPurple.copy(alpha = 0.18f))
-                            .padding(horizontal = 10.dp, vertical = 3.dp)
-                    ) {
-                        Text(genre, color = FeedAccentPurple, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                    }
-                }
-                Spacer(modifier = Modifier.height(6.dp))
+                Text(minutesAgoLabel, color = secondaryColor, fontSize = 12.sp)
+            }
+            if (!isOwnPost) {
+                Text(
+                    if (isFollowing) "Abonné (e)" else "S'abonner",
+                    color = FeedAccentPurple,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.clickable { onFollowToggle() }
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Icon(
+                Icons.Default.MoreHoriz,
+                contentDescription = "Plus d'options",
+                tint = secondaryColor,
+                modifier = Modifier.clickable { onMoreClick() }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Text(
+            "ÉCOUTE MAINTENANT",
+            color = FeedAccentPurple,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Bloc chanson : titre / artiste / source à gauche, pochette à droite.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    post.song_title,
+                    color = primaryColor,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 30.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    post.song_artist,
+                    color = secondaryColor,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Headset, contentDescription = null, tint = FeedTextSecondary, modifier = Modifier.size(13.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(post.source_label, color = FeedTextSecondary, fontSize = 11.sp)
+                    Icon(
+                        Icons.Default.Headset,
+                        contentDescription = null,
+                        tint = secondaryColor,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(post.source_label, color = secondaryColor, fontSize = 12.sp)
                 }
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            WaveformView(color = waveColor)
+            Spacer(modifier = Modifier.width(14.dp))
+            AsyncImage(
+                model = post.album_art_url,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(110.dp)
+                    .clip(RoundedCornerShape(14.dp))
+            )
         }
 
         post.caption?.let { caption ->
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(caption, color = FeedTextPrimary, fontSize = 14.sp)
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(caption, color = primaryColor, fontSize = 15.sp)
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        // Rangée like / commentaire / partage + bookmark
+        // Actions nues, sans fond en pilule : cœur, commentaire, repost à gauche ; enregistrer à droite.
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                StatPill(
+            Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                ActionStat(
                     icon = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    tint = if (isLiked) FeedLikeRed else FeedTextSecondary,
-                    label = formatCount(post.like_count + if (isLiked) 1 else 0),
+                    tint = if (isLiked) FeedLikeRed else secondaryColor,
+                    label = formatCount(post.like_count),
+                    textColor = secondaryColor,
                     onClick = onLikeToggle
                 )
-                StatPill(
+                ActionStat(
                     icon = Icons.Outlined.ChatBubbleOutline,
-                    tint = FeedTextSecondary,
+                    tint = secondaryColor,
                     label = formatCount(post.comment_count),
+                    textColor = secondaryColor,
                     onClick = onCommentClick
                 )
-                StatPill(
+                ActionStat(
                     icon = Icons.Outlined.Repeat,
-                    tint = FeedTextSecondary,
+                    tint = secondaryColor,
                     label = formatCount(post.share_count),
-                    onClick = {}
+                    textColor = secondaryColor,
+                    onClick = onRepostClick
                 )
             }
-            Icon(Icons.Default.Bookmark, contentDescription = "Enregistrer", tint = FeedTextSecondary)
+            Icon(
+                imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                contentDescription = "Enregistrer",
+                tint = secondaryColor,
+                modifier = Modifier.clickable { onSaveToggle() }
+            )
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // "Aimé par X, Y et Z autres"
+        // "Aimé par pseudo" (1 like) ou avatars empilés + "Aimé par p1, p2 et X autres" (2+ likes).
         if (post.like_count > 0) {
+            Spacer(modifier = Modifier.height(10.dp))
             Row(
-                modifier = Modifier.fillMaxWidth().clickable { },
+                modifier = Modifier.fillMaxWidth().clickable { onLikedByClick() },
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (post.like_count > 1) {
+                    StackedAvatars(profiles = likedByProfiles)
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
                 Text(
-                    "Aimé par ${formatCount(post.like_count)} personnes",
-                    color = FeedTextSecondary,
-                    fontSize = 12.sp,
-                    modifier = Modifier.weight(1f)
+                    likedByLabel(likedByProfiles, post.like_count),
+                    color = secondaryColor,
+                    fontSize = 13.sp
                 )
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = FeedTextSecondary, modifier = Modifier.size(16.dp))
             }
-            Spacer(modifier = Modifier.height(10.dp))
-        }
-
-        // Champ "Ajouter ton avis sur son goût musical" (remplace "Ajouter un commentaire")
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(50))
-                .background(FeedPillBackground)
-                .clickable { onCommentClick() }
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            AsyncImage(
-                model = myAvatarUrl,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp).clip(CircleShape).background(FeedCardBackground)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                "Ajouter ton avis sur son goût musical",
-                color = FeedTextSecondary,
-                fontSize = 12.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-            Icon(Icons.Outlined.EmojiEmotions, contentDescription = null, tint = FeedTextSecondary, modifier = Modifier.size(18.dp))
         }
     }
 }
 
 @Composable
-private fun StatPill(
+private fun ActionStat(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     tint: Color,
     label: String,
+    textColor: Color,
     onClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(FeedPillBackground)
-            .clickable { onClick() }
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+        modifier = Modifier.clickable { onClick() },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.width(6.dp))
-        Text(label, color = FeedTextSecondary, fontSize = 12.sp)
+        Text(label, color = textColor, fontSize = 13.sp)
+    }
+}
+
+@Composable
+private fun StackedAvatars(profiles: List<Profile>) {
+    Row {
+        profiles.take(3).forEachIndexed { index, profile ->
+            Box(
+                modifier = Modifier
+                    .padding(start = if (index == 0) 0.dp else (-8).dp)
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .background(Color.Gray)
+            ) {
+                AsyncImage(
+                    model = profile.avatar_url,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize().clip(CircleShape)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * "Aimé par pseudo" si un seul like ; "Aimé par pseudo1, pseudo2 et X autres" à partir
+ * de 2 likes, exactement le format de la maquette.
+ */
+private fun likedByLabel(profiles: List<Profile>, likeCount: Long): String {
+    if (likeCount <= 1) {
+        val single = profiles.firstOrNull()?.username
+        return if (single != null) "Aimé par $single" else "Aimé par 1 personne"
+    }
+    val firstTwo = profiles.take(2).map { it.username }
+    val others = likeCount - firstTwo.size
+    return when {
+        firstTwo.size == 2 && others > 0 -> "Aimé par ${firstTwo[0]}, ${firstTwo[1]} et ${formatCount(others)} autres"
+        firstTwo.size == 2 -> "Aimé par ${firstTwo[0]} et ${firstTwo[1]}"
+        firstTwo.size == 1 -> "Aimé par ${firstTwo[0]} et ${formatCount(likeCount - 1)} autres"
+        else -> "Aimé par ${formatCount(likeCount)} personnes"
     }
 }
 

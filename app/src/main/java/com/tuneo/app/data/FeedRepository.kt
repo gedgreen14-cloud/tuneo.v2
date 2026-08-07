@@ -32,6 +32,27 @@ class FeedRepository {
         return likes.map { it.post_id }.toSet()
     }
 
+    /** IDs des utilisateurs déjà suivis par userId (pour savoir qui afficher "Abonné(e)"). */
+    suspend fun followingIds(userId: String): Set<String> {
+        val follows = client.postgrest.from("follows")
+            .select { filter { eq("follower_id", userId) } }
+            .decodeList<Follow>()
+        return follows.map { it.following_id }.toSet()
+    }
+
+    suspend fun follow(followerId: String, followingId: String) {
+        client.postgrest.from("follows").insert(Follow(follower_id = followerId, following_id = followingId))
+    }
+
+    suspend fun unfollow(followerId: String, followingId: String) {
+        client.postgrest.from("follows").delete {
+            filter {
+                eq("follower_id", followerId)
+                eq("following_id", followingId)
+            }
+        }
+    }
+
     suspend fun like(postId: String, userId: String) {
         client.postgrest.from("likes").insert(Like(post_id = postId, user_id = userId))
     }
@@ -43,6 +64,35 @@ class FeedRepository {
                 eq("user_id", userId)
             }
         }
+    }
+
+    /**
+     * Pour chaque post visible dans le feed, renvoie les 3 premiers profils
+     * (par ordre d'ajout du like) ayant aimé ce post, pour afficher
+     * "Aimé par pseudo1, pseudo2 et X autres" avec leurs avatars.
+     */
+    suspend fun fetchTopLikers(postIds: List<String>): Map<String, List<Profile>> {
+        if (postIds.isEmpty()) return emptyMap()
+
+        val allLikes = client.postgrest.from("likes")
+            .select { order("created_at", Order.ASCENDING) }
+            .decodeList<LikeWithTimestamp>()
+            .filter { it.post_id in postIds }
+
+        if (allLikes.isEmpty()) return emptyMap()
+
+        val userIds = allLikes.map { it.user_id }.toSet()
+        val profiles = client.postgrest.from("profiles")
+            .select()
+            .decodeList<Profile>()
+            .filter { it.id in userIds }
+            .associateBy { it.id }
+
+        return allLikes
+            .groupBy { it.post_id }
+            .mapValues { (_, likes) ->
+                likes.mapNotNull { profiles[it.user_id] }.take(3)
+            }
     }
 
     suspend fun addComment(postId: String, userId: String, content: String) {

@@ -3,14 +3,14 @@ package com.tuneo.app.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,25 +26,29 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.tuneo.app.data.StoryWithProfile
 import com.tuneo.app.ui.theme.FeedAccentPurple
-import com.tuneo.app.ui.theme.FeedOnlineGreen
-import com.tuneo.app.ui.theme.FeedPillBackground
-import com.tuneo.app.ui.theme.FeedTextPrimary
-import com.tuneo.app.ui.theme.FeedTextSecondary
+import com.tuneo.app.ui.theme.FeedTextPrimaryDark
+import com.tuneo.app.ui.theme.FeedTextPrimaryLight
+import com.tuneo.app.ui.theme.FeedTextSecondaryDark
+import com.tuneo.app.ui.theme.FeedTextSecondaryLight
 
 private val ringGradients = listOf(
     listOf(Color(0xFF8B5CF6), Color(0xFFEC4899)), // violet -> rose
-    listOf(Color(0xFFF97316), Color(0xFFDB2777)), // orange -> rose foncé
-    listOf(Color(0xFF3B82F6), Color(0xFF06B6D4)), // bleu -> cyan
-    listOf(Color(0xFFEC4899), Color(0xFF8B5CF6)), // rose -> violet
-    listOf(Color(0xFF22C55E), Color(0xFF16A34A))  // vert -> vert foncé
+    listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9)), // violet -> violet foncé
+    listOf(Color(0xFF3B82F6), Color(0xFF1D4ED8)), // bleu
+    listOf(Color(0xFFEF4444), Color(0xFFB91C1C)), // rouge
+    listOf(Color(0xFFEC4899), Color(0xFFDB2777))  // rose
 )
+
+// Anneau dédié à "ma" story en cours d'écoute (violet -> rose, comme sur la maquette).
+private val myListeningRing = listOf(Color(0xFF8B5CF6), Color(0xFFEC4899))
 
 @Composable
 fun StoriesRow(
-    myUsername: String?,
     myAvatarUrl: String?,
+    isListeningNow: Boolean,
     stories: List<StoryWithProfile>,
     onAddStoryClick: () -> Unit,
+    onMyStoryClick: () -> Unit,
     onStoryClick: (StoryWithProfile) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -56,14 +60,17 @@ fun StoriesRow(
         item {
             AddStoryItem(onClick = onAddStoryClick)
         }
+        // "En écoute" : ma propre story, uniquement visible si je suis en train d'écouter.
+        if (isListeningNow) {
+            item {
+                MyListeningStoryItem(avatarUrl = myAvatarUrl, onClick = onMyStoryClick)
+            }
+        }
         items(stories) { item ->
             val ring = ringGradients[item.profile.username.hashCode().mod(ringGradients.size)]
             StoryItem(
                 username = item.profile.username,
-                songTitle = item.story.song_title,
-                songArtist = item.story.song_artist,
                 avatarUrl = item.profile.avatar_url,
-                songArtUrl = item.story.album_art_url,
                 ringColors = ring,
                 onClick = { onStoryClick(item) }
             )
@@ -73,6 +80,9 @@ fun StoriesRow(
 
 @Composable
 private fun AddStoryItem(onClick: () -> Unit) {
+    val isDark = isSystemInDarkTheme()
+    val secondaryColor = if (isDark) FeedTextSecondaryDark else FeedTextSecondaryLight
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.width(72.dp)
@@ -81,17 +91,67 @@ private fun AddStoryItem(onClick: () -> Unit) {
             modifier = Modifier
                 .size(64.dp)
                 .clip(CircleShape)
-                .background(FeedPillBackground)
+                .border(width = 2.dp, color = FeedAccentPurple, shape = CircleShape)
                 .clickable { onClick() },
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Ta story", tint = FeedAccentPurple)
+            Icon(Icons.Default.Add, contentDescription = "Votre story", tint = Color.White)
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            "Ta story",
-            color = FeedTextSecondary,
+            "Votre story",
+            color = secondaryColor,
             fontSize = 11.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/** Ma propre story, affichée avec le label "En écoute" (pas mon pseudo) + égaliseur en overlay. */
+@Composable
+private fun MyListeningStoryItem(avatarUrl: String?, onClick: () -> Unit) {
+    val isDark = isSystemInDarkTheme()
+    val primaryColor = if (isDark) FeedTextPrimaryDark else FeedTextPrimaryLight
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(72.dp).clickable { onClick() }
+    ) {
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .border(width = 2.dp, brush = Brush.linearGradient(myListeningRing), shape = CircleShape)
+                .padding(3.dp)
+                .clip(CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = avatarUrl,
+                contentDescription = "En écoute",
+                modifier = Modifier.fillMaxSize().clip(CircleShape)
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.45f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Equalizer,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            "En écoute",
+            color = primaryColor,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -101,67 +161,36 @@ private fun AddStoryItem(onClick: () -> Unit) {
 @Composable
 private fun StoryItem(
     username: String,
-    songTitle: String,
-    songArtist: String,
     avatarUrl: String?,
-    songArtUrl: String?,
     ringColors: List<Color>,
     onClick: () -> Unit
 ) {
+    val isDark = isSystemInDarkTheme()
+    val primaryColor = if (isDark) FeedTextPrimaryDark else FeedTextPrimaryLight
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.width(72.dp).clickable { onClick() }
     ) {
-        Box(modifier = Modifier.size(64.dp)) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .border(width = 2.dp, brush = Brush.linearGradient(ringColors), shape = CircleShape)
-                    .padding(3.dp)
-                    .clip(CircleShape)
-                    .background(FeedPillBackground)
-            ) {
-                AsyncImage(
-                    model = avatarUrl,
-                    contentDescription = username,
-                    modifier = Modifier.fillMaxSize().clip(CircleShape)
-                )
-            }
-
-            // Vignette carrée de la pochette + pastille "en ligne", collées en bas-droite
-            if (songArtUrl != null) {
-                AsyncImage(
-                    model = songArtUrl,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .align(Alignment.BottomEnd)
-                        .clip(RoundedCornerShape(4.dp))
-                        .border(1.dp, Color.Black, RoundedCornerShape(4.dp))
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .align(Alignment.TopEnd)
-                    .clip(CircleShape)
-                    .background(FeedOnlineGreen)
-                    .border(1.5.dp, Color.Black, CircleShape)
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .border(width = 2.dp, brush = Brush.linearGradient(ringColors), shape = CircleShape)
+                .padding(3.dp)
+                .clip(CircleShape)
+        ) {
+            AsyncImage(
+                model = avatarUrl,
+                contentDescription = username,
+                modifier = Modifier.fillMaxSize().clip(CircleShape)
             )
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             "@$username",
-            color = FeedTextPrimary,
+            color = primaryColor,
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            "$songTitle · $songArtist",
-            color = FeedTextSecondary,
-            fontSize = 9.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )

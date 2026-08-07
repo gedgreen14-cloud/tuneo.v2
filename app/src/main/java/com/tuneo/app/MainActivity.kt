@@ -217,7 +217,7 @@ fun TuneoApp(
             useDarkIcons = nowPlayingBackground?.let { contentColorFor(it) == androidx.compose.ui.graphics.Color(0xFF1A1A1A) } ?: !isDark
         )
         Screen.LOGIN, Screen.SIGN_UP, Screen.SHARE_CAPTION ->
-            TuneoStatusBar(backgroundColor = FeedBackground, useDarkIcons = false)
+            TuneoStatusBar(backgroundColor = libraryBackground, useDarkIcons = !isDark)
     }
 
     Box(modifier = Modifier.fillMaxSize().background(libraryBackground)) {
@@ -230,6 +230,7 @@ fun TuneoApp(
                             TuneoDestination.ACCUEIL -> FeedScreen(
                                 isAuthenticated = isAuthenticated,
                                 myProfile = myProfile,
+                                isListeningNow = playerController.isPlaying && playerController.currentSong != null,
                                 onAddStoryClick = {
                                     if (!isAuthenticated) {
                                         pendingShareAfterAuth = false
@@ -237,7 +238,8 @@ fun TuneoApp(
                                     }
                                     // Si déjà connecté : la story se met déjà à jour automatiquement
                                     // en fonction de la chanson en cours (voir LaunchedEffect ci-dessus).
-                                }
+                                },
+                                onMessagesClick = { /* écran Messages à venir */ }
                             )
 
                             TuneoDestination.DECOUVERTE -> PlaceholderScreen("Découverte")

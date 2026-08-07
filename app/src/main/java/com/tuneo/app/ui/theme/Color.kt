@@ -26,13 +26,23 @@ val PlayerTextSecondary = Color(0xFFAFC2BA)
 val MiniPlayerBackground = Color(0xFFF6D6D2)
 val MiniPlayerText = Color(0xFF1A1A1A)
 
-// Feed social (Accueil) — fond noir + accent violet, identique dans les deux modes,
-// fidèle à la maquette (fond noir profond, cartes légèrement plus claires)
-val FeedBackground = Color(0xFF000000)
-val FeedCardBackground = Color(0xFF17151C)
-val FeedAccentPurple = Color(0xFF8B5CF6)
-val FeedTextPrimary = Color(0xFFFFFFFF)
-val FeedTextSecondary = Color(0xFF9C9AA5)
+// Feed social (Accueil) — suit le thème clair/sombre du système, aucun fond de
+// card ni de pilule : tout est posé nu sur le fond, fidèle à la maquette.
+val FeedBackgroundDark = Color(0xFF000000)
+val FeedTextPrimaryDark = Color(0xFFFFFFFF)
+val FeedTextSecondaryDark = Color(0xFF9C9AA5)
+
+val FeedBackgroundLight = Color(0xFFFFFFFF)
+val FeedTextPrimaryLight = Color(0xFF000000)
+val FeedTextSecondaryLight = Color(0xFF6E6E76)
+
+val FeedAccentPurple = Color(0xFF8B5CF6) // identique dans les deux modes
 val FeedOnlineGreen = Color(0xFF3ECF6E)
 val FeedLikeRed = Color(0xFFE0455F)
+
+// Alias de compatibilité pour Login/SignUp/ShareCaption, qui gardent leur propre
+// rendu fixe (fond noir) et sont hors scope de la reconstruction du Feed.
+val FeedBackground = FeedBackgroundDark
+val FeedTextPrimary = FeedTextPrimaryDark
+val FeedTextSecondary = FeedTextSecondaryDark
 val FeedPillBackground = Color(0xFF221F29)

@@ -73,7 +73,21 @@ data class NewComment(
 )
 
 @Serializable
+data class Follow(
+    val follower_id: String,
+    val following_id: String
+)
+
+@Serializable
 data class Like(
     val post_id: String,
     val user_id: String
+)
+
+/** Variante de lecture de `likes`, avec created_at, pour trier les premiers likers d'un post. */
+@Serializable
+data class LikeWithTimestamp(
+    val post_id: String,
+    val user_id: String,
+    val created_at: String
 )

@@ -1,17 +1,14 @@
 package com.tuneo.app.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,33 +27,38 @@ import com.tuneo.app.data.StoryWithProfile
 import com.tuneo.app.ui.components.PostCard
 import com.tuneo.app.ui.components.StoriesRow
 import com.tuneo.app.ui.theme.FeedAccentPurple
-import com.tuneo.app.ui.theme.FeedBackground
-import com.tuneo.app.ui.theme.FeedPillBackground
-import com.tuneo.app.ui.theme.FeedTextPrimary
-import com.tuneo.app.ui.theme.FeedTextSecondary
+import com.tuneo.app.ui.theme.FeedBackgroundDark
+import com.tuneo.app.ui.theme.FeedBackgroundLight
+import com.tuneo.app.ui.theme.FeedTextPrimaryDark
+import com.tuneo.app.ui.theme.FeedTextPrimaryLight
+import com.tuneo.app.ui.theme.FeedTextSecondaryDark
+import com.tuneo.app.ui.theme.FeedTextSecondaryLight
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
 import java.time.format.DateTimeParseException
-
-private enum class FeedFilter(val label: String) {
-    TOUS("Tous"), AMIS("Amis"), PROCHE("Proche"), TENDANCES("Tendances")
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
     isAuthenticated: Boolean,
     myProfile: Profile?,
-    onAddStoryClick: () -> Unit
+    isListeningNow: Boolean,
+    onAddStoryClick: () -> Unit,
+    onMessagesClick: () -> Unit
 ) {
+    val isDark = isSystemInDarkTheme()
+    val background = if (isDark) FeedBackgroundDark else FeedBackgroundLight
+
     val scope = rememberCoroutineScope()
     val feedRepository = remember { FeedRepository() }
 
     var posts by remember { mutableStateOf<List<FeedPost>>(emptyList()) }
     var stories by remember { mutableStateOf<List<StoryWithProfile>>(emptyList()) }
     var likedPostIds by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var selectedFilter by remember { mutableStateOf(FeedFilter.TOUS) }
+    var savedPostIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var followingIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var topLikers by remember { mutableStateOf<Map<String, List<Profile>>>(emptyMap()) }
     var activeCommentPostId by remember { mutableStateOf<String?>(null) }
 
     fun reload() {
@@ -65,32 +67,34 @@ fun FeedScreen(
             stories = feedRepository.fetchStories()
             if (myProfile != null) {
                 likedPostIds = feedRepository.likedPostIds(myProfile.id)
+                followingIds = feedRepository.followingIds(myProfile.id)
             }
+            topLikers = feedRepository.fetchTopLikers(posts.map { it.id })
         }
     }
 
     LaunchedEffect(isAuthenticated) { reload() }
 
-    Column(modifier = Modifier.fillMaxSize().background(FeedBackground)) {
-        FeedHeader(myAvatarUrl = myProfile?.avatar_url)
+    Column(modifier = Modifier.fillMaxSize().background(background)) {
+        FeedHeader(myAvatarUrl = myProfile?.avatar_url, onMessagesClick = onMessagesClick)
 
         StoriesRow(
-            myUsername = myProfile?.username,
             myAvatarUrl = myProfile?.avatar_url,
+            isListeningNow = isListeningNow,
             stories = stories,
             onAddStoryClick = onAddStoryClick,
+            onMyStoryClick = { /* aperçu de ma propre story à venir */ },
             onStoryClick = { /* aperçu story à venir */ }
         )
-
-        FilterRow(selected = selectedFilter, onSelect = { selectedFilter = it })
 
         Spacer(modifier = Modifier.height(4.dp))
 
         if (posts.isEmpty()) {
+            val secondaryColor = if (isDark) FeedTextSecondaryDark else FeedTextSecondaryLight
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
                     "Aucune publication pour le moment.\nPartage ce que tu écoutes depuis le lecteur !",
-                    color = FeedTextSecondary,
+                    color = secondaryColor,
                     fontSize = 13.sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     modifier = Modifier.padding(32.dp)
@@ -99,15 +103,18 @@ fun FeedScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                contentPadding = PaddingValues(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(28.dp)
             ) {
                 items(posts, key = { it.id }) { post ->
                     PostCard(
                         post = post,
                         isLiked = likedPostIds.contains(post.id),
-                        myAvatarUrl = myProfile?.avatar_url,
+                        isSaved = savedPostIds.contains(post.id),
+                        isOwnPost = myProfile?.id == post.user_id,
+                        isFollowing = followingIds.contains(post.user_id),
                         minutesAgoLabel = relativeTimeLabel(post.created_at),
+                        likedByProfiles = topLikers[post.id].orEmpty(),
                         onLikeToggle = {
                             val uid = myProfile?.id ?: return@PostCard
                             scope.launch {
@@ -120,7 +127,29 @@ fun FeedScreen(
                                 }
                             }
                         },
-                        onCommentClick = { activeCommentPostId = post.id }
+                        onCommentClick = { activeCommentPostId = post.id },
+                        onRepostClick = { /* repost à venir */ },
+                        onSaveToggle = {
+                            savedPostIds = if (savedPostIds.contains(post.id)) {
+                                savedPostIds - post.id
+                            } else {
+                                savedPostIds + post.id
+                            }
+                        },
+                        onMoreClick = { /* menu options à venir */ },
+                        onLikedByClick = { /* liste des personnes ayant aimé à venir */ },
+                        onFollowToggle = {
+                            val uid = myProfile?.id ?: return@PostCard
+                            scope.launch {
+                                if (followingIds.contains(post.user_id)) {
+                                    feedRepository.unfollow(uid, post.user_id)
+                                    followingIds = followingIds - post.user_id
+                                } else {
+                                    feedRepository.follow(uid, post.user_id)
+                                    followingIds = followingIds + post.user_id
+                                }
+                            }
+                        }
                     )
                 }
                 item { Spacer(modifier = Modifier.height(90.dp)) } // place pour le mini-player + nav bar
@@ -146,67 +175,54 @@ fun FeedScreen(
 }
 
 @Composable
-private fun FeedHeader(myAvatarUrl: String?) {
-    Row(
+private fun FeedHeader(myAvatarUrl: String?, onMessagesClick: () -> Unit) {
+    val isDark = isSystemInDarkTheme()
+    val primaryColor = if (isDark) FeedTextPrimaryDark else FeedTextPrimaryLight
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Feed", color = FeedTextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.width(6.dp))
-            Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(FeedAccentPurple))
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { }) {
-                Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = FeedTextPrimary)
-            }
+        Box(modifier = Modifier.size(32.dp).align(Alignment.CenterStart)) {
             AsyncImage(
                 model = myAvatarUrl,
                 contentDescription = "Profil",
-                modifier = Modifier.size(32.dp).clip(CircleShape).background(FeedPillBackground)
+                modifier = Modifier.fillMaxSize().clip(CircleShape).background(Color.Gray)
             )
-        }
-    }
-}
-
-@Composable
-private fun FilterRow(selected: FeedFilter, onSelect: (FeedFilter) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        FeedFilter.values().forEach { filter ->
-            val isSelected = filter == selected
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(if (isSelected) FeedAccentPurple else FeedPillBackground)
-                    .clickable { onSelect(filter) }
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    filter.label,
-                    color = if (isSelected) Color.White else FeedTextSecondary,
-                    fontSize = 13.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    .size(9.dp)
+                    .align(Alignment.BottomEnd)
+                    .clip(CircleShape)
+                    .background(FeedAccentPurple)
+            )
+        }
+
+        Text(
+            "TUNEO",
+            color = primaryColor,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 3.sp,
+            modifier = Modifier.align(Alignment.Center)
+        )
+
+        Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+            IconButton(onClick = onMessagesClick) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Messages",
+                    tint = primaryColor
                 )
             }
-        }
-        Spacer(modifier = Modifier.width(4.dp))
-        Box(
-            modifier = Modifier
-                .clip(CircleShape)
-                .background(FeedPillBackground)
-                .padding(10.dp)
-        ) {
-            Icon(Icons.Default.Tune, contentDescription = "Filtres", tint = FeedTextSecondary, modifier = Modifier.size(16.dp))
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .align(Alignment.TopEnd)
+                    .clip(CircleShape)
+                    .background(FeedAccentPurple)
+            )
         }
     }
 }
@@ -219,12 +235,17 @@ private fun CommentSheet(
     onDismiss: () -> Unit,
     onSubmit: (String) -> Unit
 ) {
+    val isDark = isSystemInDarkTheme()
+    val background = if (isDark) FeedBackgroundDark else FeedBackgroundLight
+    val primaryColor = if (isDark) FeedTextPrimaryDark else FeedTextPrimaryLight
+    val secondaryColor = if (isDark) FeedTextSecondaryDark else FeedTextSecondaryLight
+
     var text by remember { mutableStateOf("") }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = FeedBackground) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = background) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             Text(
                 "Avis sur \"${post.song_title}\"",
-                color = FeedTextPrimary,
+                color = primaryColor,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp
             )
@@ -233,22 +254,19 @@ private fun CommentSheet(
                 AsyncImage(
                     model = myAvatarUrl,
                     contentDescription = null,
-                    modifier = Modifier.size(32.dp).clip(CircleShape).background(FeedPillBackground)
+                    modifier = Modifier.size(32.dp).clip(CircleShape).background(Color.Gray)
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
-                    placeholder = { Text("Ajoute ton avis sur son goût musical", color = FeedTextSecondary, fontSize = 13.sp) },
+                    placeholder = { Text("Ajoute ton avis sur son goût musical", color = secondaryColor, fontSize = 13.sp) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(50),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = FeedTextPrimary,
-                        unfocusedTextColor = FeedTextPrimary,
-                        focusedContainerColor = FeedPillBackground,
-                        unfocusedContainerColor = FeedPillBackground,
-                        focusedBorderColor = FeedAccentPurple,
-                        unfocusedBorderColor = Color.Transparent
+                        focusedTextColor = primaryColor,
+                        unfocusedTextColor = primaryColor,
+                        focusedBorderColor = FeedAccentPurple
                     ),
                     singleLine = true
                 )

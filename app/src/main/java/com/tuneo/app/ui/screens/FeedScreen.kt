@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -188,6 +189,7 @@ private fun FeedHeader(myAvatarUrl: String?, onMessagesClick: () -> Unit) {
             AsyncImage(
                 model = myAvatarUrl,
                 contentDescription = "Profil",
+                contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize().clip(CircleShape).background(Color.Gray)
             )
             Box(
@@ -254,6 +256,7 @@ private fun CommentSheet(
                 AsyncImage(
                     model = myAvatarUrl,
                     contentDescription = null,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier.size(32.dp).clip(CircleShape).background(Color.Gray)
                 )
                 Spacer(modifier = Modifier.width(10.dp))

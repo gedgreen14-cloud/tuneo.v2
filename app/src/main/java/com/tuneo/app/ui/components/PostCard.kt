@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -74,6 +75,7 @@ fun PostCard(
                 AsyncImage(
                     model = post.user_avatar_url,
                     contentDescription = post.username,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize().clip(CircleShape)
                 )
                 Box(
@@ -160,6 +162,7 @@ fun PostCard(
             AsyncImage(
                 model = post.album_art_url,
                 contentDescription = null,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(110.dp)
                     .clip(RoundedCornerShape(14.dp))
@@ -263,6 +266,7 @@ private fun StackedAvatars(profiles: List<Profile>) {
                 AsyncImage(
                     model = profile.avatar_url,
                     contentDescription = null,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize().clip(CircleShape)
                 )
             }

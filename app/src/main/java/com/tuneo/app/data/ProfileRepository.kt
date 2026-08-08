@@ -5,7 +5,8 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Count
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.storage.storage
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 class ProfileRepository {
 
@@ -121,12 +122,12 @@ class ProfileRepository {
      */
     suspend fun incrementTotalPlays(userId: String) {
         try {
-            client.postgrest.rpc("increment_total_plays", IncrementTotalPlaysParams(uid = userId))
+            client.postgrest.rpc(
+                "increment_total_plays",
+                JsonObject(mapOf("uid" to JsonPrimitive(userId)))
+            )
         } catch (e: Exception) {
             // Silencieux : la lecture locale ne doit jamais dépendre du réseau.
         }
     }
 }
-
-@Serializable
-private data class IncrementTotalPlaysParams(val uid: String)

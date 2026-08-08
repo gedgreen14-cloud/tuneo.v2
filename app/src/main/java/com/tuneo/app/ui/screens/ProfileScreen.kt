@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +37,7 @@ import com.tuneo.app.data.ProfileStats
 import com.tuneo.app.data.Song
 import com.tuneo.app.data.Story
 import com.tuneo.app.ui.components.EqualizerBars
+import com.tuneo.app.ui.components.PostCard
 import com.tuneo.app.ui.theme.FeedAccentPurple
 import com.tuneo.app.ui.theme.FeedBackgroundDark
 import com.tuneo.app.ui.theme.FeedBackgroundLight
@@ -83,6 +83,11 @@ fun ProfileScreen(
     var posts by remember { mutableStateOf<List<FeedPost>>(emptyList()) }
     var activeStory by remember { mutableStateOf<Story?>(null) }
     var isFollowing by remember { mutableStateOf(false) }
+    var likedPostIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var savedPostIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var followingIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var topLikers by remember { mutableStateOf<Map<String, List<Profile>>>(emptyMap()) }
+    var activeCommentPostId by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var selectedTab by remember { mutableStateOf(ProfileTab.POSTS) }
     var showMenu by remember { mutableStateOf(false) }
@@ -94,8 +99,11 @@ fun ProfileScreen(
         favoriteArtists = profileRepository.fetchFavoriteArtists(userId)
         posts = profileRepository.fetchUserPosts(userId)
         activeStory = profileRepository.fetchActiveStory(userId)
-        if (!isOwnProfile && viewerUserId != null) {
-            isFollowing = feedRepository.followingIds(viewerUserId).contains(userId)
+        topLikers = feedRepository.fetchTopLikers(posts.map { it.id })
+        if (viewerUserId != null) {
+            likedPostIds = feedRepository.likedPostIds(viewerUserId)
+            followingIds = feedRepository.followingIds(viewerUserId)
+            isFollowing = followingIds.contains(userId)
         }
         isLoading = false
     }
@@ -259,8 +267,56 @@ fun ProfileScreen(
                             }
                         }
                     } else {
-                        items(posts) { post ->
-                            ProfilePostPreview(post = post, primaryColor = primaryColor, secondaryColor = secondaryColor)
+                        items(posts, key = { it.id }) { post ->
+                            PostCard(
+                                post = post,
+                                isLiked = likedPostIds.contains(post.id),
+                                isSaved = savedPostIds.contains(post.id),
+                                isOwnPost = viewerUserId == post.user_id,
+                                isFollowing = followingIds.contains(post.user_id),
+                                minutesAgoLabel = "",
+                                likedByProfiles = topLikers[post.id].orEmpty(),
+                                onLikeToggle = {
+                                    val uid = viewerUserId
+                                    if (uid != null) {
+                                        scope.launch {
+                                            if (likedPostIds.contains(post.id)) {
+                                                feedRepository.unlike(post.id, uid)
+                                                likedPostIds = likedPostIds - post.id
+                                            } else {
+                                                feedRepository.like(post.id, uid)
+                                                likedPostIds = likedPostIds + post.id
+                                            }
+                                        }
+                                    }
+                                },
+                                onCommentClick = { activeCommentPostId = post.id },
+                                onRepostClick = { /* repost à venir */ },
+                                onSaveToggle = {
+                                    savedPostIds = if (savedPostIds.contains(post.id)) {
+                                        savedPostIds - post.id
+                                    } else {
+                                        savedPostIds + post.id
+                                    }
+                                },
+                                onMoreClick = { /* menu options à venir */ },
+                                onLikedByClick = { /* liste des personnes ayant aimé à venir */ },
+                                onFollowToggle = {
+                                    val uid = viewerUserId
+                                    if (uid != null) {
+                                        scope.launch {
+                                            if (followingIds.contains(post.user_id)) {
+                                                feedRepository.unfollow(uid, post.user_id)
+                                                followingIds = followingIds - post.user_id
+                                            } else {
+                                                feedRepository.follow(uid, post.user_id)
+                                                followingIds = followingIds + post.user_id
+                                            }
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.padding(bottom = 28.dp)
+                            )
                         }
                     }
                 }
@@ -276,6 +332,22 @@ fun ProfileScreen(
                 }
             }
         }
+    }
+
+    val commentPost = posts.find { it.id == activeCommentPostId }
+    if (commentPost != null && viewerUserId != null) {
+        ProfileCommentSheet(
+            post = commentPost,
+            myUserId = viewerUserId,
+            onDismiss = { activeCommentPostId = null },
+            onSubmit = { text ->
+                scope.launch {
+                    feedRepository.addComment(commentPost.id, viewerUserId, text)
+                    activeCommentPostId = null
+                    reload()
+                }
+            }
+        )
     }
 }
 
@@ -446,13 +518,19 @@ private fun FavoriteArtistsRow(artists: List<FavoriteArtist>) {
 @Composable
 private fun NowPlayingCard(story: Story?, isPlaying: Boolean, secondaryColor: Color, primaryColor: Color) {
     if (story == null) return
+    val isDark = isSystemInDarkTheme()
+    // Surface légèrement distincte du fond pour détacher la carte, adaptée au thème :
+    // gris très sombre en dark mode, gris très clair en light mode.
+    val cardSurface = if (isDark) Color(0xFF141414) else Color(0xFFF0F0F0)
+    val artPlaceholder = if (isDark) Color(0xFF1E1330) else Color(0xFFE4D9F7)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .padding(bottom = 20.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF131313))
+            .background(cardSurface)
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -460,7 +538,7 @@ private fun NowPlayingCard(story: Story?, isPlaying: Boolean, secondaryColor: Co
             modifier = Modifier
                 .size(56.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF150A30))
+                .background(artPlaceholder)
         ) {
             story.album_art_url?.let {
                 AsyncImage(
@@ -474,21 +552,12 @@ private fun NowPlayingCard(story: Story?, isPlaying: Boolean, secondaryColor: Co
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                EqualizerBars(isPlaying = isPlaying, color = Color(0xFFA78BFA), barWidth = 2.dp, maxHeight = 10.dp)
+                EqualizerBars(isPlaying = isPlaying, color = FeedAccentPurple, barWidth = 2.dp, maxHeight = 10.dp)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Écoute maintenant", color = Color(0xFFA78BFA), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text("Écoute maintenant", color = FeedAccentPurple, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
             Text(story.song_title, color = primaryColor, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(story.song_artist, color = secondaryColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .clip(CircleShape)
-                .border(1.5.dp, primaryColor, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Default.PlayArrow, contentDescription = "Lecture", tint = primaryColor, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -538,37 +607,49 @@ private fun RowScope.ProfileTabItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ProfilePostPreview(post: FeedPost, primaryColor: Color, secondaryColor: Color) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        HorizontalDivider(color = Color(0xFF111111))
-        Box(modifier = Modifier.fillMaxWidth().aspectRatio(4f / 5f)) {
-            AsyncImage(
-                model = post.album_art_url,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+private fun ProfileCommentSheet(
+    post: FeedPost,
+    myUserId: String,
+    onDismiss: () -> Unit,
+    onSubmit: (String) -> Unit
+) {
+    val isDark = isSystemInDarkTheme()
+    val background = if (isDark) FeedBackgroundDark else FeedBackgroundLight
+    val primaryColor = if (isDark) FeedTextPrimaryDark else FeedTextPrimaryLight
+    val secondaryColor = if (isDark) FeedTextSecondaryDark else FeedTextSecondaryLight
+
+    var text by remember { mutableStateOf("") }
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = background) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Text(
+                "Avis sur \"${post.song_title}\"",
+                color = primaryColor,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
             )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f)),
-                            startY = 0.4f
-                        )
-                    )
-            )
-            Column(modifier = Modifier.align(Alignment.BottomStart).padding(14.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    EqualizerBars(isPlaying = true, color = FeedAccentPurple, barWidth = 3.dp, maxHeight = 12.dp)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("ÉCOUTE ACTUELLE", color = FeedAccentPurple, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    placeholder = { Text("Ajoute ton avis sur son goût musical", color = secondaryColor, fontSize = 13.sp) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(50),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = primaryColor,
+                        unfocusedTextColor = primaryColor,
+                        focusedBorderColor = FeedAccentPurple
+                    ),
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(onClick = { if (text.isNotBlank()) onSubmit(text.trim()) }) {
+                    Text("Envoyer", color = FeedAccentPurple, fontWeight = FontWeight.Bold)
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(post.song_title, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(post.song_artist, color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

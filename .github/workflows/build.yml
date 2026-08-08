@@ -9,6 +9,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Force toujours le tout dernier commit de main, peu importe la branche
+          # sélectionnée dans le menu de déclenchement manuel sur GitHub.
+          ref: main
+
+      - name: Afficher le commit compilé (pour vérifier qu'on est bien à jour)
+        run: git log -1 --oneline
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4

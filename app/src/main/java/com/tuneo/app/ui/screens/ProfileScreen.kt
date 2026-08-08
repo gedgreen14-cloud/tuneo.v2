@@ -64,6 +64,7 @@ fun ProfileScreen(
     isCurrentlyPlaying: Boolean,
     onBack: () -> Unit,
     onEditProfile: () -> Unit,
+    onShareProfile: (Profile) -> Unit = {},
     onEditFavoriteArtists: () -> Unit = {},
     onSignOut: () -> Unit = {},
     onMessageClick: (Profile) -> Unit = {}
@@ -199,17 +200,17 @@ fun ProfileScreen(
             item {
                 ProfileHeaderSection(
                     profile = currentProfile,
+                    stats = stats,
                     primaryColor = primaryColor,
                     secondaryColor = secondaryColor
                 )
-
-                StatsRow(stats = stats, totalPlays = currentProfile.total_plays, secondaryColor = secondaryColor, primaryColor = primaryColor)
 
                 ActionsRow(
                     isOwnProfile = isOwnProfile,
                     isFollowing = isFollowing,
                     secondaryColor = secondaryColor,
                     onEditProfile = onEditProfile,
+                    onShareProfile = { onShareProfile(currentProfile) },
                     onFollowToggle = {
                         if (viewerUserId != null) {
                             scope.launch {
@@ -352,71 +353,107 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileHeaderSection(profile: Profile, primaryColor: Color, secondaryColor: Color) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(84.dp)
-                .clip(CircleShape)
-                .background(Brush.linearGradient(listOf(FeedAccentPurple, Color(0xFF2B1A5E))))
+private fun ProfileHeaderSection(
+    profile: Profile,
+    stats: ProfileStats,
+    primaryColor: Color,
+    secondaryColor: Color
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+        // Avatar à gauche, pseudo + 4 stats alignés à droite sur le même bloc.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (profile.avatar_url != null) {
-                AsyncImage(
-                    model = profile.avatar_url,
-                    contentDescription = profile.username,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(CircleShape)
-                )
+            Box(
+                modifier = Modifier
+                    .size(84.dp)
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(listOf(FeedAccentPurple, Color(0xFF2B1A5E))))
+            ) {
+                if (profile.avatar_url != null) {
+                    AsyncImage(
+                        model = profile.avatar_url,
+                        contentDescription = profile.username,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().clip(CircleShape)
+                    )
+                }
             }
-        }
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                profile.username,
-                color = primaryColor,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 20.sp
-            )
-            profile.bio?.let { bio ->
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(bio, color = if (primaryColor == FeedTextPrimaryDark) Color(0xFFE5E5E5) else Color(0xFF2A2A2A), fontSize = 14.sp, lineHeight = 19.sp)
-            }
-            profile.link_url?.let { link ->
-                Spacer(modifier = Modifier.height(4.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    link,
-                    color = Color(0xFFA78BFA),
-                    fontSize = 14.sp,
-                    textDecoration = TextDecoration.Underline
+                    profile.username,
+                    color = primaryColor,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 18.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
+                    StatItem(formatStatCount(stats.postCount), "Publications", primaryColor, secondaryColor)
+                    StatItem(formatStatCount(stats.followerCount), "Abonnés", primaryColor, secondaryColor)
+                    StatItem(formatStatCount(stats.followingCount), "Abonnements", primaryColor, secondaryColor)
+                    StatItem(formatStatCount(profile.total_plays), "Écoutes", primaryColor, secondaryColor)
+                }
             }
         }
-    }
-}
 
-@Composable
-private fun StatsRow(stats: ProfileStats, totalPlays: Long, secondaryColor: Color, primaryColor: Color) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 18.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        StatItem(formatStatCount(stats.postCount), "Publications", primaryColor, secondaryColor)
-        StatItem(formatStatCount(stats.followerCount), "Abonnés", primaryColor, secondaryColor)
-        StatItem(formatStatCount(stats.followingCount), "Abonnements", primaryColor, secondaryColor)
-        StatItem(formatStatCount(totalPlays), "Écoutes", primaryColor, secondaryColor)
+        // Bio et lien pleine largeur en dessous, jamais à côté de l'avatar.
+        profile.bio?.let { bio ->
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                bio,
+                color = if (primaryColor == FeedTextPrimaryDark) Color(0xFFE5E5E5) else Color(0xFF2A2A2A),
+                fontSize = 14.sp,
+                lineHeight = 19.sp
+            )
+        }
+        profile.link_url?.let { link ->
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                truncateLink(link),
+                color = Color(0xFFA78BFA),
+                fontSize = 14.sp,
+                textDecoration = TextDecoration.Underline,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
 @Composable
 private fun StatItem(value: String, label: String, primaryColor: Color, secondaryColor: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = primaryColor, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.widthIn(min = 0.dp)
+    ) {
+        Text(
+            value,
+            color = primaryColor,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 15.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Visible,
+            softWrap = false
+        )
         Spacer(modifier = Modifier.height(2.dp))
-        Text(label, color = secondaryColor, fontSize = 12.sp)
+        Text(
+            label,
+            color = secondaryColor,
+            fontSize = 10.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Visible,
+            softWrap = false
+        )
     }
+}
+
+/** Tronque l'affichage d'un lien trop long pour ne jamais casser le layout du profil. */
+private fun truncateLink(link: String, maxChars: Int = 40): String {
+    return if (link.length > maxChars) link.take(maxChars) + "…" else link
 }
 
 @Composable
@@ -425,6 +462,7 @@ private fun ActionsRow(
     isFollowing: Boolean,
     secondaryColor: Color,
     onEditProfile: () -> Unit,
+    onShareProfile: () -> Unit,
     onFollowToggle: () -> Unit,
     onMessageClick: () -> Unit
 ) {
@@ -443,6 +481,17 @@ private fun ActionsRow(
                 contentAlignment = Alignment.Center
             ) {
                 Text("Modifier le profil", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .border(1.dp, Color(0xFF444444), RoundedCornerShape(10.dp))
+                    .clickable { onShareProfile() }
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Partager le profil", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
         } else {
             Box(
